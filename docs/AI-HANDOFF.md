@@ -11,9 +11,9 @@
 |------|-------|
 | **Repo** | `/Users/ekambindra/Projects/aurora` |
 | **GitHub** | https://github.com/Ekam-Bindra/aurora |
-| **`main` commit** | `9baabab` — Phases 1–6 MVP merged |
-| **Active branch** | `feat/phase-7-ingestion` (P7 ingestion backend + data sources UI) |
-| **Next work** | Merge PR #7; E2E upload demo; P8 board reports + admin |
+| **`main` commit** | `f3402de` — Phases 1–7 merged (PR #7) |
+| **Active branch** | `feat/phase-8-board-admin` (P8 backend; frontend subagent handles web) |
+| **Next work** | P8 web (reports + admin UI); merge PR; optional E2E upload demo |
 | **Demo login** | `cfo@nimbus.test` / `aurora-demo-2026` |
 | **Local API** | `./scripts/local-run.sh` or uvicorn on port 8000 |
 
@@ -27,13 +27,14 @@
 - ✅ **P4 complete:** React Flow explorer (impact/neighborhood), Vanguard golden tests, `/graph/*` APIs
 - ✅ **P5 complete:** ForecastEngine, RiskGenomeEngine, `/forecasts/*`, `/risk/*`, `/explain/*`; web fan chart + Risk page
 - ✅ **P6 backend (merged):** `packages/simulations` Monte Carlo engine; `/scenarios/*`, `/simulations/*`, `/explain/simulation/{id}`; mock AI provider + `/agent/*`; golden + integration tests; API 45 pytest / simulations 6 pytest
-- ✅ **P7 backend (this branch):** file ingestion (CSV/XLSX), connector framework + `accounting_csv` demo; `/data-sources/*`, `/ingestion/*` job status + lineage; post-ingestion mart/graph refresh; idempotent re-sync; API **56 pytest** / ruff green
-- ✅ **P7 frontend (this branch):** `/data` Data Sources page — source registry cards, health status, file upload + schema mapping, job history, lineage drill-down, rejected rows; `lib/api.ts` wired to `/data-sources/*` and `/ingestion/*`; nav `Data Sources` ready
+- ✅ **P7 merged (PR #7):** ingestion APIs + connectors; `/data` Data Sources UI; API **56 pytest** / ruff green
+- ✅ **P8 backend (this branch):** board report generator (`/board-reports/*`) with KPIs, forecast, risk, scenario sections + HTML/PDF export; admin console (`/users`, `/roles`, `/audit-logs`); audit seed + mutation logging; API **67 pytest** / ruff green
 
 ### What's not done
 
-- ⏳ Merge PR #7 and E2E demo: login → upload CSV → metrics refresh
-- ⏳ P8–P9 post-MVP (admin, board reports, production AWS)
+- ⏳ P8 frontend: `/reports` builder + `/admin` console UI
+- ⏳ E2E demo: login → upload CSV → metrics refresh
+- ⏳ P9 production AWS
 
 ---
 
@@ -108,6 +109,8 @@
 | Python 3.9 compat | `Optional[]` not `\|` unions in API/database/ml |
 | P6 simulation store in-memory | Redis/job queue in later iteration; matches forecast pattern |
 | P7 ingestion job store in-memory | Same pattern as simulation/forecast; worker queue in P9 |
+| P8 board report store in-memory | Same pattern; `BoardReport` table exists for P9 persistence |
+| P8 audit log | Uses `audit_log` table when DB enabled; in-memory + demo seed otherwise |
 
 ---
 
@@ -123,7 +126,8 @@
 | P6 Simulations | `packages/simulations/aurora_sim/engine.py` |
 | P6 API | `apps/api/aurora/modules/simulation/router.py`, `modules/agent/router.py`, `providers/mock.py`, `services/simulation.py`, `services/agent.py` |
 | P7 Ingestion | `apps/api/aurora/modules/ingestion/router.py`, `services/ingestion.py`, `connectors/accounting_csv.py` |
-| P6 Web | `apps/web/app/(dashboard)/simulations/page.tsx`, `agent/page.tsx`, `components/agent/AgentChat.tsx` |
+| P8 Board reports | `apps/api/aurora/modules/reports/router.py`, `services/board_reports.py` |
+| P8 Admin | `apps/api/aurora/modules/admin/router.py`, `services/admin.py`, `services/audit.py` |
 | P7 Web | `apps/web/app/(dashboard)/data/page.tsx`, `lib/api.ts` (data-sources + ingestion) |
 | Graph UI | `apps/web/components/graph/GraphExplorer.tsx` |
 | RBAC | `apps/api/aurora/core/rbac.py` |
@@ -154,3 +158,4 @@ Demo: cfo@nimbus.test / aurora-demo-2026. Enterprise quality.
 | 2026-06-29 | P6 frontend: simulations, AI agent, Explain overlay, dashboard polish |
 | 2026-06-29 | P7 backend: ingestion API, connector framework, accounting_csv demo, 56 pytest |
 | 2026-06-29 | P7 frontend: Data Sources page at `/data`, ingestion API client, nav enabled |
+| 2026-06-29 | P8 backend: board reports + admin APIs, audit logging, 67 pytest |
