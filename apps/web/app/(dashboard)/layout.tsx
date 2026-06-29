@@ -6,7 +6,13 @@ import { useEffect, useState, type ReactNode } from "react";
 import { ExplainProvider } from "@/components/explain/ExplainProvider";
 import { clearToken, getMe, getToken, type AuthUser } from "@/lib/api";
 
-type NavItem = { href: string; label: string; permission: string | null; ready: boolean };
+type NavItem = {
+  href: string;
+  label: string;
+  permission: string | null;
+  permissions?: string[];
+  ready: boolean;
+};
 
 const NAV: NavItem[] = [
   { href: "/overview", label: "Overview", permission: null, ready: true },
@@ -16,9 +22,15 @@ const NAV: NavItem[] = [
   { href: "/graph", label: "Knowledge Graph", permission: "read:graph", ready: true },
   { href: "/simulations", label: "Simulations", permission: "run:simulation", ready: true },
   { href: "/agent", label: "AI Agent", permission: "use:ai_agent", ready: true },
-  { href: "/reports", label: "Board Reports", permission: "create:board_report", ready: false },
+  { href: "/reports", label: "Board Reports", permission: "create:board_report", ready: true },
   { href: "/data", label: "Data Sources", permission: "manage:data_sources", ready: true },
-  { href: "/admin", label: "Admin", permission: "manage:users", ready: false },
+  {
+    href: "/admin",
+    label: "Admin",
+    permission: null,
+    permissions: ["manage:users", "view:audit_log"],
+    ready: true,
+  },
 ];
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
@@ -44,8 +56,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     router.replace("/login");
   }
 
-  const canSee = (item: NavItem) =>
-    item.permission === null || (user?.permissions.includes(item.permission) ?? false);
+  const canSee = (item: NavItem) => {
+    if (item.permissions?.length) {
+      return item.permissions.some((p) => user?.permissions.includes(p));
+    }
+    return item.permission === null || (user?.permissions.includes(item.permission) ?? false);
+  };
 
   return (
     <ExplainProvider>
