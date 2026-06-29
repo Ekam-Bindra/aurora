@@ -2,7 +2,7 @@
 
 Production deployment for AWS ECS/Fargate, local production compose, SSO, analytics backends, and operational runbooks.
 
-**Related:** [`infra/terraform/README.md`](../infra/terraform/README.md) · [`deployment/deployment-guide.md`](deployment/deployment-guide.md)
+**Related:** [`DEPLOY-CHECKLIST.md`](DEPLOY-CHECKLIST.md) (first AWS deploy) · [`infra/terraform/README.md`](../infra/terraform/README.md) · [`deployment/deployment-guide.md`](deployment/deployment-guide.md)
 
 ---
 
@@ -85,6 +85,8 @@ When `OIDC_ENABLED=false`, email/password login (`/auth/login`) remains availabl
 ---
 
 ## 3. AWS deployment
+
+Run `./scripts/deploy-check.sh` locally before any apply (validates Terraform, compose, tooling). Step-by-step first deploy: [`DEPLOY-CHECKLIST.md`](DEPLOY-CHECKLIST.md).
 
 ### 3.1 Provision infrastructure
 
