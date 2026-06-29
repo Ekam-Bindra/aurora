@@ -11,9 +11,9 @@
 |------|-------|
 | **Repo** | `/Users/ekambindra/Projects/aurora` |
 | **GitHub** | https://github.com/Ekam-Bindra/aurora |
-| **`main` commit** | `9bede57` — Phases 1–5 integrated |
-| **Active branch** | `feat/phase-7-ingestion` (P7 data sources UI + backend ingestion) |
-| **Next work** | Backend ingestion endpoints on same branch; E2E upload demo; P8 admin/reports |
+| **`main` commit** | `9baabab` — Phases 1–6 MVP merged |
+| **Active branch** | `feat/phase-7-ingestion` (P7 ingestion backend + data sources UI) |
+| **Next work** | Merge PR #7; E2E upload demo; P8 board reports + admin |
 | **Demo login** | `cfo@nimbus.test` / `aurora-demo-2026` |
 | **Local API** | `./scripts/local-run.sh` or uvicorn on port 8000 |
 
@@ -27,12 +27,12 @@
 - ✅ **P4 complete:** React Flow explorer (impact/neighborhood), Vanguard golden tests, `/graph/*` APIs
 - ✅ **P5 complete:** ForecastEngine, RiskGenomeEngine, `/forecasts/*`, `/risk/*`, `/explain/*`; web fan chart + Risk page
 - ✅ **P6 backend (merged):** `packages/simulations` Monte Carlo engine; `/scenarios/*`, `/simulations/*`, `/explain/simulation/{id}`; mock AI provider + `/agent/*`; golden + integration tests; API 45 pytest / simulations 6 pytest
+- ✅ **P7 backend (this branch):** file ingestion (CSV/XLSX), connector framework + `accounting_csv` demo; `/data-sources/*`, `/ingestion/*` job status + lineage; post-ingestion mart/graph refresh; idempotent re-sync; API **56 pytest** / ruff green
 - ✅ **P7 frontend (this branch):** `/data` Data Sources page — source registry cards, health status, file upload + schema mapping, job history, lineage drill-down, rejected rows; `lib/api.ts` wired to `/data-sources/*` and `/ingestion/*`; nav `Data Sources` ready
 
 ### What's not done
 
-- ⏳ P7 backend: ingestion module (`/data-sources`, `/ingestion/uploads`, job store, ETL worker)
-- ⏳ E2E demo: login → upload CSV → metrics refresh
+- ⏳ Merge PR #7 and E2E demo: login → upload CSV → metrics refresh
 - ⏳ P8–P9 post-MVP (admin, board reports, production AWS)
 
 ---
@@ -107,6 +107,7 @@
 | Graph is projection of Postgres | Rebuildable; Neo4j optional with in-memory fallback for local |
 | Python 3.9 compat | `Optional[]` not `\|` unions in API/database/ml |
 | P6 simulation store in-memory | Redis/job queue in later iteration; matches forecast pattern |
+| P7 ingestion job store in-memory | Same pattern as simulation/forecast; worker queue in P9 |
 
 ---
 
@@ -121,6 +122,7 @@
 | P5 Web | `apps/web/app/(dashboard)/forecasting/page.tsx`, `risk/page.tsx`, `lib/api.ts` |
 | P6 Simulations | `packages/simulations/aurora_sim/engine.py` |
 | P6 API | `apps/api/aurora/modules/simulation/router.py`, `modules/agent/router.py`, `providers/mock.py`, `services/simulation.py`, `services/agent.py` |
+| P7 Ingestion | `apps/api/aurora/modules/ingestion/router.py`, `services/ingestion.py`, `connectors/accounting_csv.py` |
 | P6 Web | `apps/web/app/(dashboard)/simulations/page.tsx`, `agent/page.tsx`, `components/agent/AgentChat.tsx` |
 | P7 Web | `apps/web/app/(dashboard)/data/page.tsx`, `lib/api.ts` (data-sources + ingestion) |
 | Graph UI | `apps/web/components/graph/GraphExplorer.tsx` |
@@ -150,4 +152,5 @@ Demo: cfo@nimbus.test / aurora-demo-2026. Enterprise quality.
 | 2026-06-29 | P5 forecast + risk UI shipped on web (`/forecasting`, `/risk`) |
 | 2026-06-29 | P6 backend: Monte Carlo engine, scenarios/simulations/agent APIs, mock AI provider |
 | 2026-06-29 | P6 frontend: simulations, AI agent, Explain overlay, dashboard polish |
+| 2026-06-29 | P7 backend: ingestion API, connector framework, accounting_csv demo, 56 pytest |
 | 2026-06-29 | P7 frontend: Data Sources page at `/data`, ingestion API client, nav enabled |

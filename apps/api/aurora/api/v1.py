@@ -9,6 +9,7 @@ from ..modules.auth.router import router as auth_router
 from ..modules.forecasts.router import router as forecasts_router
 from ..modules.graph.router import router as graph_router
 from ..modules.health.router import router as health_router
+from ..modules.ingestion.router import router as ingestion_router
 from ..modules.metrics.router import router as metrics_router
 from ..modules.risk.router import router as risk_router
 from ..modules.simulation.router import router as simulation_router
@@ -23,4 +24,5 @@ api_router.include_router(forecasts_router)
 api_router.include_router(risk_router)
 api_router.include_router(simulation_router)
 api_router.include_router(agent_router)
+api_router.include_router(ingestion_router)
 api_router.include_router(workspaces_router)
