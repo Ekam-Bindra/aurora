@@ -10,7 +10,7 @@ AURORA is a **complete MVP through Phase 9** — monorepo with FastAPI backend, 
 
 | | |
 |---|---|
-| **Repo** | https://github.com/Ekam-Bindra/aurora |
+| **Repo** | https://github.com/Ekam-Bindra/aurora (`main` @ session end: `414193a`) |
 | **Login** | `cfo@nimbus.test` / `aurora-demo-2026` |
 | **Next step** | First AWS deploy → `docs/DEPLOY-CHECKLIST.md` |
 
