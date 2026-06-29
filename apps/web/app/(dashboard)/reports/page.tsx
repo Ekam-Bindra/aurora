@@ -309,6 +309,7 @@ export default function BoardReportsPage() {
       });
       if (
         report.status === "ready" ||
+        report.status === "in_review" ||
         report.status === "approved" ||
         report.status === "published" ||
         report.status === "failed"
