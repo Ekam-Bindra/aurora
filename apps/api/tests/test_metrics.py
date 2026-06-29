@@ -11,7 +11,6 @@ from aurora.core.config import get_settings
 from aurora.main import create_app
 from aurora.repositories.memory import get_store
 from aurora.seed.demo import seed_demo
-
 from tests.conftest import login
 
 

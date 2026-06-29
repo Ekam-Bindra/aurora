@@ -88,3 +88,14 @@ def require_permission(permission: str):
         return context
 
     return _guard
+
+
+def require_any_permission(*permissions: str):
+    """Dependency factory: 403 unless the caller holds at least one permission."""
+
+    def _guard(context: AuthContext = Depends(get_auth_context)) -> AuthContext:
+        if not any(context.has(p) for p in permissions):
+            raise Forbidden(f"Missing one of required permissions: {', '.join(permissions)}")
+        return context
+
+    return _guard

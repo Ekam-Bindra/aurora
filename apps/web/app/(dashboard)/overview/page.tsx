@@ -1,14 +1,20 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   formatCents,
+  formatDimensionLabel,
   formatPct,
   formatYoY,
   getMe,
   getMetricsOverview,
+  getRiskGenome,
+  listForecasts,
+  severityTone,
   type AuthUser,
   type MetricsOverviewData,
+  type RiskGenomeData,
 } from "@/lib/api";
 
 type Kpi = { label: string; value: string; delta?: string; tone?: "positive" | "negative" | "warning" };
@@ -85,6 +91,8 @@ const toneClass: Record<string, string> = {
 export default function OverviewPage() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [overview, setOverview] = useState<MetricsOverviewData | null>(null);
+  const [risk, setRisk] = useState<RiskGenomeData | null>(null);
+  const [forecastCount, setForecastCount] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -92,6 +100,12 @@ export default function OverviewPage() {
     getMetricsOverview()
       .then(setOverview)
       .catch((e: Error) => setError(e.message));
+    getRiskGenome()
+      .then(setRisk)
+      .catch(() => undefined);
+    listForecasts()
+      .then((f) => setForecastCount(f.length))
+      .catch(() => undefined);
   }, []);
 
   const kpis = buildKpis(overview);
@@ -130,6 +144,54 @@ export default function OverviewPage() {
             </div>
           ))
         )}
+      </section>
+
+      <section className="mt-6 grid gap-4 md:grid-cols-2">
+        <div className="rounded-lg border border-border bg-surface p-5">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold">Forecasting</h2>
+            <Link href="/forecasting" className="text-xs text-brand-accent hover:underline">
+              Open explorer →
+            </Link>
+          </div>
+          <p className="mt-2 text-sm text-text-muted">
+            {forecastCount !== null && forecastCount > 0
+              ? `${forecastCount} forecast${forecastCount === 1 ? "" : "s"} available — view actuals with CI bands.`
+              : "Generate revenue forecasts with confidence intervals."}
+          </p>
+        </div>
+
+        <div className="rounded-lg border border-border bg-surface p-5">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold">Risk Genome</h2>
+            <Link href="/risk" className="text-xs text-brand-accent hover:underline">
+              View details →
+            </Link>
+          </div>
+          {risk ? (
+            <div className="mt-2">
+              <div className="text-2xl font-bold tabular-nums">
+                {risk.overall_score.toFixed(1)}
+                <span className="ml-2 text-sm font-normal text-text-muted">overall</span>
+              </div>
+              <ul className="mt-3 space-y-1 text-xs text-text-muted">
+                {[...risk.dimensions]
+                  .sort((a, b) => b.score - a.score)
+                  .slice(0, 3)
+                  .map((d) => (
+                    <li key={d.dimension} className="flex justify-between">
+                      <span>{formatDimensionLabel(d.dimension)}</span>
+                      <span className={toneClass[severityTone(d.severity)] ?? "text-text-muted"}>
+                        {d.score.toFixed(0)}
+                      </span>
+                    </li>
+                  ))}
+              </ul>
+            </div>
+          ) : (
+            <p className="mt-2 text-sm text-text-muted">Loading risk profile…</p>
+          )}
+        </div>
       </section>
 
       <section className="mt-8 rounded-lg border border-border bg-surface p-5">
