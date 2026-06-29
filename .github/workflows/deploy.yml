@@ -1,3 +1,11 @@
+# Build API + web images, push to ECR, and force ECS redeployment.
+# Does NOT run Terraform or Alembic migrations — see docs/DEPLOY-CHECKLIST.md.
+#
+# Required repository secrets:
+#   AWS_ROLE_ARN  — IAM role ARN trusted by GitHub OIDC for ECR + ECS
+#   AWS_REGION    — optional; defaults to us-east-1
+#
+# Required GitHub environments: staging, production (match workflow_dispatch input)
 name: deploy
 
 on:
@@ -67,7 +75,12 @@ jobs:
             aws ecs update-service \
               --cluster "$CLUSTER" \
               --service "${{ env.PROJECT_NAME }}-${{ inputs.environment }}-${SERVICE}" \
-              --force-new-deployment
+              --force-new-deployment \
+              --no-cli-pager
+            aws ecs wait services-stable \
+              --cluster "$CLUSTER" \
+              --services "${{ env.PROJECT_NAME }}-${{ inputs.environment }}-${SERVICE}" \
+              || echo "Warning: ${SERVICE} did not reach stable within wait timeout"
           done
           echo "Deployed tag ${IMAGE_TAG} to ${CLUSTER}"
 
@@ -77,5 +90,9 @@ jobs:
           echo "- Environment: ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
           echo "- Image tag: ${{ inputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
           echo "- Region: ${{ env.AWS_REGION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Cluster: ${{ env.PROJECT_NAME }}-${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Run migrations manually if schema changed (see docs/DEPLOYMENT.md)." >> $GITHUB_STEP_SUMMARY
+          echo "### Post-deploy" >> $GITHUB_STEP_SUMMARY
+          echo "1. Run Alembic migrations if schema changed (\`docs/DEPLOY-CHECKLIST.md\` Step 4)." >> $GITHUB_STEP_SUMMARY
+          echo "2. Smoke test: \`BASE_URL=https://<alb>/api/v1 ./scripts/load-test.sh\`" >> $GITHUB_STEP_SUMMARY
+          echo "3. Preflight locally: \`./scripts/deploy-check.sh\`" >> $GITHUB_STEP_SUMMARY

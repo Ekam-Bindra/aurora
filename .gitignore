@@ -36,6 +36,13 @@ data/
 !apps/web/app/**/data/**
 minio-data/
 
+# ── Terraform / local tooling ────────────────────────
+.tools/
+infra/terraform/.terraform/
+infra/terraform/*.tfstate
+infra/terraform/*.tfstate.*
+infra/terraform/terraform.tfvars
+
 # ── OS / editors ─────────────────────────────────────
 .DS_Store
 Thumbs.db

@@ -11,24 +11,25 @@
 |------|-------|
 | **Repo** | `/Users/ekambindra/Projects/aurora` |
 | **GitHub** | https://github.com/Ekam-Bindra/aurora |
-| **`main` commit** | `bf8fb31` — All 9 phases merged (PR #9) |
-| **Active branch** | `feat/e2e-tests` |
-| **Next work** | First AWS deploy via `docs/DEPLOYMENT.md` |
+| **`main` commit** | `ba8daff` — Phases 1–9 + CI + E2E merged |
+| **Active branch** | `main` (PR #16 deploy-readiness pending) |
+| **Next work** | First AWS deploy: `./scripts/deploy-check.sh` → `docs/DEPLOY-CHECKLIST.md` |
 | **Demo login** | `cfo@nimbus.test` / `aurora-demo-2026` |
 | **Local API** | `./scripts/local-run.sh` or uvicorn on port 8000 |
-| **Deploy docs** | `docs/DEPLOYMENT.md` |
+| **Deploy docs** | `docs/DEPLOYMENT.md`, `docs/DEPLOY-CHECKLIST.md` |
 
 ### What's done
 
 - ✅ Full design docs (12 documents)
-- ✅ P1–P8 merged to `main` (through PR #8)
-- ✅ **P9 merged (PR #9):** Terraform AWS, prod compose, ClickHouse analytics path, OIDC SSO, security hardening, load tests, `docs/DEPLOYMENT.md`
-- ✅ **E2E (branch):** Playwright suite in `apps/web/e2e/`, `pnpm test:e2e`, `docs/E2E.md`
+- ✅ P1–P9 merged to `main` (through PR #9)
+- ✅ **CI (PR #15):** analytics job, `docs/CI.md`, 116 tests green
+- ✅ **E2E (PR #17):** Playwright suite in `apps/web/e2e/`, `pnpm test:e2e`, `docs/E2E.md`
+- ✅ **Deploy readiness (PR #16):** `scripts/deploy-check.sh`, `docs/DEPLOY-CHECKLIST.md`, Terraform validate green
 - ✅ API **78 pytest** / ruff green
 
 ### What's not done
 
-- ⏳ First production AWS deploy (`terraform apply` + deploy workflow)
+- ⏳ First production AWS deploy (`terraform apply` + deploy workflow — checklist ready)
 
 ---
 
@@ -68,7 +69,7 @@
 
 | Area | Files |
 |------|-------|
-| Deploy | `docs/DEPLOYMENT.md`, `infra/terraform/`, `.github/workflows/deploy.yml` |
+| Deploy | `docs/DEPLOYMENT.md`, `docs/DEPLOY-CHECKLIST.md`, `scripts/deploy-check.sh`, `infra/terraform/`, `.github/workflows/deploy.yml` |
 | **Local CI** | `docs/CI.md` — mirror `.github/workflows/ci.yml` locally |
 | Analytics | `packages/analytics/aurora_analytics/` |
 | SSO | `apps/api/aurora/modules/auth/oidc_router.py`, `core/oidc.py` |
@@ -82,6 +83,7 @@
 
 | Date | Update |
 |------|--------|
+| 2026-06-29 | Deploy readiness: preflight script, first-deploy checklist, Terraform fmt fix, workflow ECS wait + docs |
 | 2026-06-29 | E2E: Playwright suite (`apps/web/e2e`), `pnpm test:e2e`, `docs/E2E.md` |
 | 2026-06-29 | P9: AWS Terraform, OIDC, security hardening, ClickHouse analytics path, 78 pytest |
 | 2026-06-29 | P8 backend: board reports + admin APIs, audit logging, 67 pytest |
