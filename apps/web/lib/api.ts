@@ -595,6 +595,180 @@ function parseExplainRef(ref: string): { kind: ExplainData["kind"]; id: string }
   return null;
 }
 
+// --- Data Sources & Ingestion (Phase 7) ---
+
+export type DataSourceKind = "file" | "accounting" | "crm" | "hris" | "api";
+export type DataSourceStatus = "connected" | "error" | "syncing" | "disabled";
+
+export type DataSource = {
+  id: string;
+  kind: DataSourceKind;
+  name: string;
+  status: DataSourceStatus;
+  last_synced_at?: string | null;
+  config?: Record<string, unknown>;
+  health?: { status?: string; last_synced_at?: string | null; detail?: string };
+  created_at?: string | null;
+};
+
+export type IngestionTarget = "invoices" | "expenses" | "customers" | "vendors";
+
+export type IngestionJobStatus =
+  | "queued"
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancelled";
+
+export type IngestionJobError = {
+  row: number;
+  issue: string;
+  action: "rejected" | "skipped" | string;
+};
+
+export type IngestionJobSummary = {
+  job_id: string;
+  status: IngestionJobStatus;
+  target: IngestionTarget | string;
+  source_id?: string | null;
+  rows_total?: number;
+  rows_inserted?: number;
+  rows_updated?: number;
+  rows_rejected?: number;
+  started_at?: string | null;
+  finished_at?: string | null;
+};
+
+export type IngestionJobDetail = IngestionJobSummary & {
+  errors?: IngestionJobError[];
+  lineage_ref?: string | null;
+  ws_channel?: string | null;
+};
+
+export type DataSourceCreateParams = {
+  kind: DataSourceKind;
+  name: string;
+  config?: Record<string, unknown>;
+};
+
+export type UploadIngestionParams = {
+  file: File;
+  target: IngestionTarget;
+  mapping?: Record<string, string>;
+};
+
+async function requestRaw(path: string, init: RequestInit = {}): Promise<Response> {
+  const token = getToken();
+  const res = await fetch(`${API_URL}${path}`, {
+    ...init,
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(init.headers ?? {}),
+    },
+  });
+  if (!res.ok) {
+    let message = `Request failed (${res.status})`;
+    try {
+      const body = await res.json();
+      message = body?.error?.message ?? message;
+    } catch {
+      /* non-JSON error */
+    }
+    throw new Error(message);
+  }
+  return res;
+}
+
+export async function listDataSources(): Promise<DataSource[]> {
+  const res = await request<{ data: DataSource[] }>("/data-sources");
+  return res.data;
+}
+
+export async function createDataSource(
+  params: DataSourceCreateParams,
+): Promise<{ id: string; status: string }> {
+  const res = await request<{ data: { id: string; status: string } }>("/data-sources", {
+    method: "POST",
+    body: JSON.stringify({
+      kind: params.kind,
+      name: params.name,
+      config: params.config ?? {},
+    }),
+  });
+  return res.data;
+}
+
+export async function syncDataSource(sourceId: string): Promise<{ job_id: string; status: string }> {
+  const res = await request<{ data: { job_id: string; status: string } }>(
+    `/ingestion/${encodeURIComponent(sourceId)}/sync`,
+    { method: "POST" },
+  );
+  return res.data;
+}
+
+export async function uploadIngestionFile(
+  params: UploadIngestionParams,
+): Promise<{ job_id: string; status: string; target: string; ws_channel?: string }> {
+  const form = new FormData();
+  form.append("file", params.file);
+  form.append("target", params.target);
+  if (params.mapping) {
+    form.append("mapping", JSON.stringify(params.mapping));
+  }
+  const res = await requestRaw("/ingestion/uploads", { method: "POST", body: form });
+  const body = (await res.json()) as {
+    data: { job_id: string; status: string; target: string; ws_channel?: string };
+  };
+  return body.data;
+}
+
+export async function listIngestionJobs(): Promise<IngestionJobSummary[]> {
+  const res = await request<{ data: IngestionJobSummary[] }>("/ingestion/jobs");
+  return res.data;
+}
+
+export async function getIngestionJob(jobId: string): Promise<IngestionJobDetail> {
+  const res = await request<{ data: IngestionJobDetail }>(
+    `/ingestion/jobs/${encodeURIComponent(jobId)}`,
+  );
+  return res.data;
+}
+
+export function dataSourceStatusTone(
+  status: DataSourceStatus,
+): "positive" | "warning" | "negative" | "muted" {
+  switch (status) {
+    case "connected":
+      return "positive";
+    case "syncing":
+      return "warning";
+    case "error":
+      return "negative";
+    default:
+      return "muted";
+  }
+}
+
+export function ingestionJobStatusTone(
+  status: IngestionJobStatus,
+): "positive" | "warning" | "negative" | "muted" {
+  switch (status) {
+    case "completed":
+      return "positive";
+    case "running":
+    case "queued":
+      return "warning";
+    case "failed":
+      return "negative";
+    default:
+      return "muted";
+  }
+}
+
+export function formatDataSourceKind(kind: string): string {
+  return kind.charAt(0).toUpperCase() + kind.slice(1);
+}
+
 export async function getExplain(ref: string): Promise<ExplainData> {
   const parsed = parseExplainRef(ref);
   if (!parsed) throw new Error(`Unsupported explain ref: ${ref}`);
