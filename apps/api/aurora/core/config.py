@@ -7,12 +7,16 @@ production if insecure placeholder values are left in place.
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import List, Optional
+from typing import List, Optional, Union
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from .oidc import OidcConfig, parse_oidc_config
 
 _DEV_SECRET = "dev-insecure-change-me-please-set-a-strong-secret-key"
 INSECURE_PLACEHOLDERS = {_DEV_SECRET, "dev-insecure-change-me", "change-me", ""}
+_VALID_ANALYTICS_BACKENDS = {"postgres", "clickhouse"}
 
 
 class Settings(BaseSettings):
@@ -43,6 +47,27 @@ class Settings(BaseSettings):
     neo4j_uri: Optional[str] = None
     redis_url: Optional[str] = None
 
+    # Analytics (Phase 9)
+    analytics_backend: str = "postgres"  # postgres | clickhouse
+    clickhouse_url: Optional[str] = None
+
+    # Object storage
+    s3_endpoint: Optional[str] = None
+    s3_bucket: Optional[str] = None
+    s3_region: str = "us-east-1"
+
+    # OIDC / SSO (Phase 9)
+    oidc_enabled: bool = False
+    oidc_issuer: Optional[str] = None
+    oidc_client_id: Optional[str] = None
+    oidc_client_secret: Optional[str] = None
+    oidc_redirect_uri: Optional[str] = None
+    oidc_scopes: str = "openid profile email"
+
+    # Security hardening
+    auth_rate_limit_per_minute: int = 20
+    security_headers_enabled: bool = True
+
     # AI provider abstraction (mock requires no keys).
     ai_provider: str = "mock"  # mock | openai | bedrock
 
@@ -52,9 +77,40 @@ class Settings(BaseSettings):
     demo_seed: int = 42
     demo_seed_scale: float = 0.1  # 1.0 = full Nimbus spec; lower is faster for laptop dev
 
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, value: Union[str, List[str]]) -> List[str]:
+        if isinstance(value, str):
+            return [origin.strip() for origin in value.split(",") if origin.strip()]
+        return value
+
+    @field_validator("analytics_backend")
+    @classmethod
+    def validate_analytics_backend(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if normalized not in _VALID_ANALYTICS_BACKENDS:
+            raise ValueError(
+                f"ANALYTICS_BACKEND must be one of {sorted(_VALID_ANALYTICS_BACKENDS)}"
+            )
+        return normalized
+
     @property
     def is_production(self) -> bool:
         return self.app_env.lower() == "production"
+
+    @property
+    def is_staging_or_production(self) -> bool:
+        return self.app_env.lower() in {"staging", "production"}
+
+    def oidc_config(self) -> Optional[OidcConfig]:
+        return parse_oidc_config(
+            enabled=self.oidc_enabled,
+            issuer=self.oidc_issuer,
+            client_id=self.oidc_client_id,
+            client_secret=self.oidc_client_secret,
+            redirect_uri=self.oidc_redirect_uri,
+            scopes_raw=self.oidc_scopes,
+        )
 
     def validate_runtime(self) -> None:
         """Refuse to run in production with insecure defaults."""
@@ -62,6 +118,28 @@ class Settings(BaseSettings):
             raise RuntimeError(
                 "SECRET_KEY must be set to a strong value when APP_ENV=production."
             )
+        if self.is_production and len(self.secret_key) < 32:
+            raise RuntimeError(
+                "SECRET_KEY must be at least 32 characters when APP_ENV=production."
+            )
+        if self.is_production and self.access_token_ttl_seconds > 900:
+            raise RuntimeError(
+                "ACCESS_TOKEN_TTL_SECONDS must be <= 900 in production."
+            )
+        if (
+            self.is_production
+            and self.seed_demo_on_startup
+            and self.demo_password == "aurora-demo-2026"
+        ):
+            raise RuntimeError(
+                "Change DEMO_PASSWORD from the default when APP_ENV=production."
+            )
+        if self.analytics_backend == "clickhouse" and not self.clickhouse_url:
+            raise RuntimeError(
+                "CLICKHOUSE_URL is required when ANALYTICS_BACKEND=clickhouse."
+            )
+        if self.oidc_enabled:
+            self.oidc_config()
 
 
 @lru_cache

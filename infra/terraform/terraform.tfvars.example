@@ -1,0 +1,6 @@
+environment     = "staging"
+aws_region      = "us-east-1"
+cors_origins    = ["https://staging.example.com"]
+certificate_arn = ""
+api_image_tag   = "latest"
+web_image_tag   = "latest"

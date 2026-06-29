@@ -5,9 +5,9 @@ from __future__ import annotations
 from datetime import date
 from typing import Any, Dict, List, Optional
 
+from aurora_analytics import get_mart_rows
 from aurora_db.models import Customer, Expense, RevenueRecord, Vendor
 from aurora_ml.financial import FinancialEngine
-from aurora_ml.marts import get_mart_rows
 from aurora_ml.registry import METRIC_REGISTRY, get_metric
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session

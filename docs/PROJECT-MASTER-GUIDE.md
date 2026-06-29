@@ -30,10 +30,16 @@ impact analysis, Monte Carlo simulations, and an explainable executive AI agent.
 | `packages/database` | SQLAlchemy models, Alembic, Nimbus seeder (`aurora_db`) |
 | `packages/ml` | Financial marts, calculators, forecast + risk engines (`aurora_ml`) |
 | `packages/graph` | Knowledge graph sync + queries (`aurora_graph`) |
+| `packages/simulations` | Monte Carlo engine (`aurora_sim`) |
+| `packages/analytics` | Analytics mart backends — Postgres/DuckDB, optional ClickHouse |
 | `packages/config` | Shared ESLint/TS/Tailwind presets |
-| `infra/docker` | Docker Compose (Postgres, Neo4j, Redis, MinIO, nginx) |
+| `infra/docker` | Docker Compose (Postgres, Neo4j, Redis, MinIO, nginx, ClickHouse profile) |
+| `infra/terraform` | AWS VPC, ECS Fargate, ALB, RDS, ECR, Secrets Manager |
 | `scripts/local-run.sh` | SQLite dev API without Docker |
-| `.github/workflows/ci.yml` | CI: api, database, ml, graph, web |
+| `scripts/load-test.sh` | k6/curl smoke tests for staging |
+| `.github/workflows/ci.yml` | CI: api, database, ml, graph, simulations, web |
+| `.github/workflows/deploy.yml` | Manual AWS deploy (ECR + ECS) |
+| `docs/DEPLOYMENT.md` | Production deploy runbook (Phase 9) |
 | `docs/` | Architecture, data model, API spec, roadmap |
 
 **GitHub:** https://github.com/Ekam-Bindra/aurora (private)
@@ -49,12 +55,12 @@ impact analysis, Monte Carlo simulations, and an explainable executive AI agent.
 | **P1** | Foundation — monorepo, auth/RBAC, web shell, Docker, CI | ✅ Done |
 | **P2** | Data model, Alembic, Nimbus seeder, tenant repos | ✅ Done |
 | **P3** | Financial intelligence — marts, `/metrics/*`, Financials UI | ✅ Done (`0868194`) |
-| **P4** | Knowledge graph — sync, `/graph/*`, React Flow explorer | ✅ Done on branch — merge PR #4 |
-| **P5** | Forecasting + Risk Genome | 🔄 Foundation on `feat/phase-5-forecasting-risk` |
-| **P6** | Simulation + AI Agent + full dashboard → **MVP** | ⏳ Pending |
-| **P7** | Ingestion + live connectors | Post-MVP |
-| **P8** | Board reports + Admin console | Post-MVP |
-| **P9** | AWS production, ClickHouse, security hardening | Post-MVP |
+| **P4** | Knowledge graph — sync, `/graph/*`, React Flow explorer | ✅ Done (`27bc579`) |
+| **P5** | Forecasting + Risk Genome | ✅ Done (`27bc579`) |
+| **P6** | Simulation + AI Agent + full dashboard → **MVP** | ✅ Done (`27bc579`) |
+| **P7** | Ingestion + live connectors | ✅ Done (`27bc579`) |
+| **P8** | Board reports + Admin console | ✅ Done (`27bc579`) |
+| **P9** | AWS production, ClickHouse, SSO, security hardening | 🔄 On `feat/phase-9-aws-hardening` |
 
 **MVP** = end of Phase 6 (runnable demo without external AI keys).
 **Production-ready for real users** = end of Phase 9 (+ your org's SSO, onboarding, ops).
@@ -269,7 +275,7 @@ hands-off iteration. You explicitly requested this mode for AURORA development.
 |-----------|---------------|-------------|
 | **Internal demo (MVP)** | CFO login → dashboard → risk → simulate → AI answer | P4–P6 |
 | **Pilot customers** | File ingestion, admin, board exports | P7–P8 |
-| **Production SaaS** | AWS, SSO, scale, security review | P9 |
+| **Production SaaS** | AWS, SSO, scale, security review | P9 (in progress) |
 
 See **time estimates** in `AI-HANDOFF.md` § Estimates.
 
@@ -279,4 +285,4 @@ See **time estimates** in `AI-HANDOFF.md` § Estimates.
 
 | Date | Change |
 |------|--------|
-| 2026-06-28 | P3 merged; P4 foundation (graph package, APIs, impact UI) |
+| 2026-06-29 | P8 merged; P9 AWS Terraform, OIDC, security hardening, ClickHouse path |
