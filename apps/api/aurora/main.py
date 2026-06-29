@@ -51,6 +51,18 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
                     settings.demo_seed_scale,
                     settings.demo_password,
                 )
+                from .graph_store import get_graph_store
+                from .services.graph import refresh_graph
+
+                with session_scope() as session:
+                    refresh_graph(session, result["company_id"])
+                snap = get_graph_store().get_snapshot(result["company_id"])
+                node_count = len(snap.nodes) if snap else 0
+                logger.info(
+                    "Knowledge graph synced for company %s (%d nodes)",
+                    result["company_id"],
+                    node_count,
+                )
         elif settings.seed_demo_on_startup:
             logins = seed_demo(get_store(), settings.demo_password)
             logger.info(

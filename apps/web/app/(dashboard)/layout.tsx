@@ -12,7 +12,7 @@ const NAV: NavItem[] = [
   { href: "/financials", label: "Financials", permission: "read:financials", ready: true },
   { href: "/forecasting", label: "Forecasting", permission: "read:financials", ready: false },
   { href: "/risk", label: "Risk Genome", permission: "read:operations", ready: false },
-  { href: "/graph", label: "Knowledge Graph", permission: "read:graph", ready: false },
+  { href: "/graph", label: "Knowledge Graph", permission: "read:graph", ready: true },
   { href: "/simulations", label: "Simulations", permission: "run:simulation", ready: false },
   { href: "/agent", label: "AI Agent", permission: "use:ai_agent", ready: false },
   { href: "/reports", label: "Board Reports", permission: "create:board_report", ready: false },

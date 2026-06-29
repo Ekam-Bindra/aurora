@@ -27,6 +27,8 @@ fi
 source "$VENV/bin/activate"
 pip install -q --upgrade pip
 pip install -q -e "$ROOT/packages/database"
+pip install -q -e "$ROOT/packages/ml"
+pip install -q -e "$ROOT/packages/graph"
 pip install -q -e "$API_DIR[dev]"
 
 echo "==> Running API tests (in-memory mode)"
