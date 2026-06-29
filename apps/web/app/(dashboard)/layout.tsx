@@ -10,8 +10,8 @@ type NavItem = { href: string; label: string; permission: string | null; ready: 
 const NAV: NavItem[] = [
   { href: "/overview", label: "Overview", permission: null, ready: true },
   { href: "/financials", label: "Financials", permission: "read:financials", ready: true },
-  { href: "/forecasting", label: "Forecasting", permission: "read:financials", ready: false },
-  { href: "/risk", label: "Risk Genome", permission: "read:operations", ready: false },
+  { href: "/forecasting", label: "Forecasting", permission: "read:financials", ready: true },
+  { href: "/risk", label: "Risk Genome", permission: "read:operations", ready: true },
   { href: "/graph", label: "Knowledge Graph", permission: "read:graph", ready: true },
   { href: "/simulations", label: "Simulations", permission: "run:simulation", ready: false },
   { href: "/agent", label: "AI Agent", permission: "use:ai_agent", ready: false },

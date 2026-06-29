@@ -27,11 +27,12 @@
 - ✅ PR #1, #2, #3 merged to `main`
 - ✅ **P4 complete on branch:** React Flow explorer (impact/neighborhood), Vanguard golden tests, `/graph/*` APIs, impact panel
 - ✅ **P5 foundation started:** `ForecastEngine` baseline, `RiskGenomeEngine` (8 dims), `/forecasts/*`, `/risk/*` stubs + tests
+- ✅ **P5 frontend:** Forecasting page (fan chart, horizon/metric selectors), Risk Genome page (radar, gauges, drill-down), Overview widgets, nav enabled
 
 ### What's not done
 
 - ⏳ Merge PR #4 to `main` (branch pushed, CI should pass — merge blocked by env approval)
-- ⏳ P5 remaining: Prophet ensemble, SHAP explain, forecast fan chart + risk panel UI, backtest MAPE target
+- ⏳ P5 remaining: Prophet ensemble, SHAP explain, backtest MAPE target, `/explain/forecast/*` + `/explain/risk/*`
 - ⏳ P6 Simulation + AI Agent + MVP dashboard
 - ⏳ P7–P9 post-MVP (connectors, board reports, production AWS)
 
@@ -91,7 +92,7 @@
 
 1. Prophet (or ensemble) with rolling-origin backtest + MAPE target on Nimbus
 2. Full risk scorers (operational/talent graph-coupled)
-3. Dashboard forecast fan chart + Risk page UI
+3. Dashboard forecast fan chart + Risk page UI — **done** (`/forecasting`, `/risk`, Overview widgets)
 4. `/explain/forecast/*` and `/explain/risk/*` endpoints
 
 ---
@@ -118,6 +119,7 @@
 | Forecast spec | `docs/architecture/financial-risk-simulation-models.md` §3–4 |
 | P5 ML | `packages/ml/aurora_ml/forecast.py`, `risk.py` |
 | P5 API | `apps/api/aurora/modules/forecasts/router.py`, `modules/risk/router.py` |
+| P5 Web | `apps/web/app/(dashboard)/forecasting/page.tsx`, `risk/page.tsx`, `lib/api.ts` |
 | Graph UI | `apps/web/components/graph/GraphExplorer.tsx` |
 | RBAC | `apps/api/aurora/core/rbac.py` |
 
@@ -141,3 +143,4 @@ Demo: cfo@nimbus.test / aurora-demo-2026. Enterprise quality.
 |------|--------|
 | 2026-06-28 | Initial handoff; P3 merged; P4 started; estimates added |
 | 2026-06-29 | P4 React Flow + golden tests complete; P5 foundation started |
+| 2026-06-29 | P5 forecast + risk UI shipped on web (`/forecasting`, `/risk`) |

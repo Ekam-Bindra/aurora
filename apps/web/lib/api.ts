@@ -242,3 +242,128 @@ export function formatYoY(delta: number | null | undefined): string | undefined 
   const sign = delta > 0 ? "+" : "";
   return `${sign}${delta.toFixed(1)}% YoY`;
 }
+
+// --- Forecasting (Phase 5) ---
+
+export type ForecastPoint = {
+  period: string;
+  yhat_cents: number;
+  lower_cents: number;
+  upper_cents: number;
+};
+
+export type ForecastAccuracy = {
+  mape: number;
+  rmse_cents: number;
+  backtest_windows: number;
+  interval_coverage?: number | null;
+};
+
+export type ForecastData = {
+  id: string;
+  metric: string;
+  method: string;
+  horizon_periods: number;
+  status: string;
+  points: ForecastPoint[];
+  accuracy?: ForecastAccuracy | null;
+  model_version?: string;
+  explain_ref?: string;
+};
+
+export type ForecastCreateParams = {
+  metric?: string;
+  granularity?: string;
+  horizon_periods?: number;
+  method?: string;
+};
+
+export async function listForecasts(): Promise<ForecastData[]> {
+  const res = await request<{ data: { forecasts: ForecastData[] } }>("/forecasts");
+  return res.data.forecasts;
+}
+
+export async function getForecast(forecastId: string): Promise<ForecastData> {
+  const res = await request<{ data: ForecastData }>(`/forecasts/${encodeURIComponent(forecastId)}`);
+  return res.data;
+}
+
+export async function createForecast(params: ForecastCreateParams = {}): Promise<{ id: string; status: string }> {
+  const res = await request<{ data: { id: string; status: string } }>("/forecasts", {
+    method: "POST",
+    body: JSON.stringify({
+      metric: params.metric ?? "revenue",
+      granularity: params.granularity ?? "month",
+      horizon_periods: params.horizon_periods ?? 12,
+      method: params.method ?? "baseline",
+    }),
+  });
+  return res.data;
+}
+
+// --- Risk Genome (Phase 5) ---
+
+export type RiskDriver = {
+  factor: string;
+  value: number;
+  contribution: number;
+};
+
+export type RiskDimension = {
+  dimension: string;
+  score: number;
+  severity: "low" | "moderate" | "high" | "critical" | string;
+  drivers: RiskDriver[];
+  explanation: string;
+  recommended_actions: string[];
+};
+
+export type RiskGenomeData = {
+  computed_at: string;
+  overall_score: number;
+  dimensions: RiskDimension[];
+};
+
+export type RiskGenomeHistoryEntry = {
+  computed_at: string;
+  overall_score: number;
+};
+
+export async function getRiskGenome(): Promise<RiskGenomeData> {
+  const res = await request<{ data: RiskGenomeData }>("/risk/genome");
+  return res.data;
+}
+
+export async function getRiskDimension(dimension: string): Promise<RiskDimension> {
+  const res = await request<{ data: RiskDimension }>(
+    `/risk/genome/${encodeURIComponent(dimension)}`,
+  );
+  return res.data;
+}
+
+export async function getRiskGenomeHistory(): Promise<RiskGenomeHistoryEntry[]> {
+  const res = await request<{ data: { history: RiskGenomeHistoryEntry[] } }>("/risk/genome/history");
+  return res.data.history;
+}
+
+export function formatDimensionLabel(key: string): string {
+  return key
+    .split("_")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+export function severityTone(severity: string): "positive" | "warning" | "negative" | "muted" {
+  switch (severity) {
+    case "low":
+      return "positive";
+    case "moderate":
+      return "warning";
+    case "high":
+      return "warning";
+    case "critical":
+      return "negative";
+    default:
+      return "muted";
+  }
+}
