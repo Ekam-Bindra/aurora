@@ -37,8 +37,9 @@ class Settings(BaseSettings):
     api_v1_prefix: str = "/api/v1"
     cors_origins: List[str] = ["http://localhost:3000", "http://localhost"]
 
-    # Datastores (declared now; wired in Phase 2). Optional so Phase 1 runs in-memory.
+    # Datastores. When ``database_url`` is set the API uses ``aurora_db`` (Phase 2).
     database_url: Optional[str] = None
+    database_auto_create: bool = True  # SQLite local dev: create tables from metadata
     neo4j_uri: Optional[str] = None
     redis_url: Optional[str] = None
 
@@ -48,6 +49,8 @@ class Settings(BaseSettings):
     # Demo seeding
     seed_demo_on_startup: bool = True
     demo_password: str = "aurora-demo-2026"
+    demo_seed: int = 42
+    demo_seed_scale: float = 0.1  # 1.0 = full Nimbus spec; lower is faster for laptop dev
 
     @property
     def is_production(self) -> bool:

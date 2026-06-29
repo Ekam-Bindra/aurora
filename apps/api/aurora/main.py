@@ -16,6 +16,7 @@ from .api.v1 import api_router
 from .core.config import Settings, get_settings
 from .core.errors import register_exception_handlers
 from .core.logging import configure_logging, get_logger, new_request_id, set_request_id
+from .persistence import dispose_database, init_database, is_database_enabled, session_scope
 from .repositories.memory import get_store
 from .seed.demo import seed_demo
 
@@ -28,14 +29,38 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
-        if settings.seed_demo_on_startup:
+        if settings.database_url:
+            init_database(
+                settings.database_url,
+                create_tables=settings.database_auto_create,
+            )
+            logger.info("Database enabled: %s", settings.database_url)
+            if settings.seed_demo_on_startup:
+                from aurora_db.seed.nimbus import seed_nimbus
+
+                with session_scope() as session:
+                    result = seed_nimbus(
+                        session,
+                        seed=settings.demo_seed,
+                        scale=settings.demo_seed_scale,
+                        password=settings.demo_password,
+                    )
+                logger.info(
+                    "Seeded demo tenant 'nimbus' (%d personas, scale=%s, password=%s)",
+                    len(result.get("logins", [])),
+                    settings.demo_seed_scale,
+                    settings.demo_password,
+                )
+        elif settings.seed_demo_on_startup:
             logins = seed_demo(get_store(), settings.demo_password)
             logger.info(
-                "Seeded demo tenant 'nimbus' with %d users (password: %s)",
+                "Seeded in-memory demo tenant 'nimbus' with %d users (password: %s)",
                 len(logins),
                 settings.demo_password,
             )
         yield
+        if is_database_enabled():
+            dispose_database()
 
     app = FastAPI(
         title=settings.project_name,

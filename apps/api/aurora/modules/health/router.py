@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from fastapi import APIRouter
+from sqlalchemy import text
 
 from ...core.config import get_settings
+from ...persistence import is_database_enabled, session_scope
 
 router = APIRouter(tags=["health"])
 
@@ -18,10 +20,17 @@ def health() -> dict:
 
 @router.get("/ready")
 def ready() -> dict:
-    """Readiness: dependencies are reachable.
+    """Readiness: dependencies are reachable."""
+    checks: dict[str, str] = {}
+    if is_database_enabled():
+        try:
+            with session_scope() as session:
+                session.execute(text("SELECT 1"))
+            checks["database"] = "ok"
+        except Exception as exc:  # pragma: no cover - surfaced in response
+            checks["database"] = f"error: {exc}"
+            return {"status": "not_ready", "checks": checks}
+    else:
+        checks["store"] = "memory"
 
-    Phase 1 runs on the in-memory store, so it is always ready. The structure is in place to
-    add Postgres/Neo4j/Redis checks in Phase 2.
-    """
-    checks = {"store": "ok"}
     return {"status": "ready", "checks": checks}

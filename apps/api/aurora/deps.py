@@ -2,22 +2,49 @@
 
 from __future__ import annotations
 
+from typing import Generator, Optional
+
 import jwt
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.orm import Session
 
 from .core.config import Settings, get_settings
 from .core.errors import Forbidden, Unauthorized
 from .core.rbac import AuthContext, permissions_for_roles
 from .core.security import decode_token
 from .core.tenancy import set_current_tenant
-from .repositories.memory import InMemoryStore, get_store
+from .persistence import get_session_factory
+from .repositories.facade import DatabaseUserStore, MemoryUserStore, UserStore
+from .repositories.memory import get_store
 
 _bearer = HTTPBearer(auto_error=False)
 
 
-def get_store_dep() -> InMemoryStore:
-    return get_store()
+def get_db_session() -> Generator[Optional[Session], None, None]:
+    """Yield a SQLAlchemy session when the database is enabled; otherwise ``None``."""
+    factory = get_session_factory()
+    if factory is None:
+        yield None
+        return
+    session = factory()
+    try:
+        yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
+def get_user_store(
+    settings: Settings = Depends(get_settings),
+    session: Optional[Session] = Depends(get_db_session),
+) -> UserStore:
+    if settings.database_url and session is not None:
+        return DatabaseUserStore(session)
+    return MemoryUserStore(get_store())
 
 
 def get_auth_context(
@@ -48,7 +75,6 @@ def get_auth_context(
         roles=roles,
         permissions=permissions_for_roles(roles),
     )
-    # Bind the tenant for the duration of the request so repositories stay scoped.
     set_current_tenant(context.tenant_id)
     return context
 

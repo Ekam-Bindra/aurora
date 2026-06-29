@@ -12,9 +12,9 @@ from fastapi import APIRouter, Depends
 from ...core.errors import NotFound
 from ...core.pagination import PaginationParams, paginate
 from ...core.rbac import AuthContext, Permission
-from ...deps import get_auth_context, get_store_dep, require_permission
+from ...deps import get_auth_context, get_user_store, require_permission
 from ...domain.models import CompanyPublic, UserPublic
-from ...repositories.memory import InMemoryStore
+from ...repositories.facade import UserStore
 
 router = APIRouter(prefix="/workspaces", tags=["workspaces"])
 
@@ -22,7 +22,7 @@ router = APIRouter(prefix="/workspaces", tags=["workspaces"])
 @router.get("/current", response_model=CompanyPublic)
 def current_workspace(
     context: AuthContext = Depends(get_auth_context),
-    store: InMemoryStore = Depends(get_store_dep),
+    store: UserStore = Depends(get_user_store),
 ) -> CompanyPublic:
     company = store.get_company(context.tenant_id)
     if company is None:
@@ -40,7 +40,7 @@ def current_workspace(
 def list_users(
     params: PaginationParams = Depends(),
     context: AuthContext = Depends(require_permission(Permission.MANAGE_USERS)),
-    store: InMemoryStore = Depends(get_store_dep),
+    store: UserStore = Depends(get_user_store),
 ) -> dict:
     users = [
         UserPublic(

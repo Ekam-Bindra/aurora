@@ -9,8 +9,8 @@ from ...core.config import Settings, get_settings
 from ...core.errors import Unauthorized
 from ...core.rbac import AuthContext, permissions_for_roles
 from ...core.security import create_token, decode_token, verify_password
-from ...deps import get_auth_context, get_store_dep
-from ...repositories.memory import InMemoryStore
+from ...deps import get_auth_context, get_user_store
+from ...repositories.facade import UserStore
 from .schemas import (
     AccessTokenResponse,
     AuthUser,
@@ -37,7 +37,7 @@ def _issue_access(user_id: str, tenant_id: str, email: str, roles, settings: Set
 @router.post("/login", response_model=LoginResponse)
 def login(
     body: LoginRequest,
-    store: InMemoryStore = Depends(get_store_dep),
+    store: UserStore = Depends(get_user_store),
     settings: Settings = Depends(get_settings),
 ) -> LoginResponse:
     user = store.get_user_by_email(body.email)
@@ -114,7 +114,7 @@ def logout(_: AuthContext = Depends(get_auth_context)) -> Response:
 @router.get("/me", response_model=AuthUser)
 def me(
     context: AuthContext = Depends(get_auth_context),
-    store: InMemoryStore = Depends(get_store_dep),
+    store: UserStore = Depends(get_user_store),
 ) -> AuthUser:
     user = store.get_user(context.tenant_id, context.user_id)
     company = store.get_company(context.tenant_id)

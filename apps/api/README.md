@@ -30,9 +30,25 @@ Alembic migrations, tenant-scoped repositories, and the deterministic **Nimbus**
 PostgreSQL in production/CI, SQLite for fast local tests — and is exercised against a real Postgres
 service in CI (`alembic upgrade head` + full-scale seed/verify + the test suite).
 
-Wiring the API's repository interface to `aurora-db` (replacing the in-memory store, no route
-changes) is the next step; until then the two layers share the same repository shape and RBAC/
-password formats so the swap is mechanical. To seed a database directly today:
+Wiring the API's repository interface to `aurora-db` (replacing the in-memory store when
+``DATABASE_URL`` is set, no route changes) is **done**. Set ``DATABASE_URL`` (SQLite or Postgres)
+and the API auto-creates SQLite tables, seeds Nimbus at ``demo_seed_scale`` (default 0.1 for
+fast laptop dev), and authenticates against persisted users. Without ``DATABASE_URL`` the API
+falls back to the in-memory store (used by the test suite).
+
+```bash
+# One-command local run (SQLite, no Docker):
+./scripts/local-run.sh
+
+# Or manually:
+export DATABASE_URL=sqlite:///./data/aurora_local.db
+cd packages/database && pip install -e ".[dev]" && cd ../apps/api
+pip install -e ".[dev]"
+uvicorn aurora.main:app --reload --port 8000
+# OpenAPI: http://localhost:8000/api/v1/docs
+```
+
+To seed/verify a database directly (without starting the API):
 
 ```bash
 cd packages/database
