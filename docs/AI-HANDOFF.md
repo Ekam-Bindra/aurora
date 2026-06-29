@@ -13,7 +13,7 @@
 | **GitHub** | https://github.com/Ekam-Bindra/aurora |
 | **`main` commit** | `9bede57` — Phases 1–5 integrated |
 | **Active branch** | `feat/phase-6-mvp` (P6 simulation + AI agent) |
-| **Next work** | Backend P6 merge; wire live API; P7 ingestion |
+| **Next work** | Merge PR #6; E2E demo against live API; P7 ingestion |
 | **Demo login** | `cfo@nimbus.test` / `aurora-demo-2026` |
 | **Local API** | `./scripts/local-run.sh` or uvicorn on port 8000 |
 
@@ -26,12 +26,12 @@
 - ✅ PR #1, #2, #3 merged to `main`
 - ✅ **P4 complete:** React Flow explorer (impact/neighborhood), Vanguard golden tests, `/graph/*` APIs
 - ✅ **P5 complete:** ForecastEngine, RiskGenomeEngine, `/forecasts/*`, `/risk/*`, `/explain/*`; web fan chart + Risk page
-- ✅ **P6 frontend (this branch):** `/simulations` (shock picker, distributions, recommendations), `/agent` (chat + citations + tool cards), Explain overlay, Overview recommendations + Ask AURORA teaser, nav enabled, `api.ts` wired to `/scenarios/*`, `/simulations/*`, `/agent/*`, `/explain/*`
+- ✅ **P6 frontend (this branch):** `/simulations`, `/agent`, Explain overlay, Overview recommendations
+- ✅ **P6 backend (this branch):** `packages/simulations` Monte Carlo engine; `/scenarios/*`, `/simulations/*`, `/explain/simulation/{id}`; mock AI provider + `/agent/*`; golden + integration tests; API 45 pytest / simulations 6 pytest
 
 ### What's not done
 
-- ⏳ P6 backend merge (simulation engine + agent routes on `feat/phase-6-mvp`)
-- ⏳ End-to-end demo: run simulation + agent against live API
+- ⏳ Merge PR #6 and run full E2E demo (login → dashboard → simulate → AI)
 - ⏳ P7–P9 post-MVP (connectors, board reports, production AWS)
 
 ---
@@ -105,7 +105,7 @@
 | `AI_PROVIDER=mock` through MVP | No external keys |
 | Graph is projection of Postgres | Rebuildable; Neo4j optional with in-memory fallback for local |
 | Python 3.9 compat | `Optional[]` not `\|` unions in API/database/ml |
-| P5 forecast store in-memory | Redis/job queue in later iteration |
+| P6 simulation store in-memory | Redis/job queue in later iteration; matches forecast pattern |
 
 ---
 
@@ -118,7 +118,9 @@
 | P5 ML | `packages/ml/aurora_ml/forecast.py`, `risk.py` |
 | P5 API | `apps/api/aurora/modules/forecasts/router.py`, `modules/risk/router.py`, `services/risk.py` |
 | P5 Web | `apps/web/app/(dashboard)/forecasting/page.tsx`, `risk/page.tsx`, `lib/api.ts` |
-| P6 Web | `apps/web/app/(dashboard)/simulations/page.tsx`, `agent/page.tsx`, `components/explain/`, `components/agent/AgentChat.tsx`, `components/simulation/` |
+| P6 Simulations | `packages/simulations/aurora_sim/engine.py` |
+| P6 API | `apps/api/aurora/modules/simulation/router.py`, `modules/agent/router.py`, `providers/mock.py`, `services/simulation.py`, `services/agent.py` |
+| P6 Web | `apps/web/app/(dashboard)/simulations/page.tsx`, `agent/page.tsx`, `components/agent/AgentChat.tsx` |
 | Graph UI | `apps/web/components/graph/GraphExplorer.tsx` |
 | RBAC | `apps/api/aurora/core/rbac.py` |
 
@@ -144,4 +146,5 @@ Demo: cfo@nimbus.test / aurora-demo-2026. Enterprise quality.
 | 2026-06-29 | P5 backend complete: forecast ensemble + backtest, 8-dim risk genome, explain endpoints |
 | 2026-06-29 | P4 React Flow + golden tests complete; P5 foundation started |
 | 2026-06-29 | P5 forecast + risk UI shipped on web (`/forecasting`, `/risk`) |
+| 2026-06-29 | P6 backend: Monte Carlo engine, scenarios/simulations/agent APIs, mock AI provider |
 | 2026-06-29 | P6 frontend: simulations, AI agent, Explain overlay, dashboard polish |
