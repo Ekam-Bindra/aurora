@@ -196,6 +196,27 @@ export async function getGraphImpact(nodeId: string, depth = 2): Promise<GraphIm
   return res.data;
 }
 
+export type GraphEdge = {
+  id?: string;
+  source_id: string;
+  target_id: string;
+  type: string;
+  properties?: Record<string, unknown>;
+};
+
+export type GraphNeighborhood = {
+  node: GraphNode | null;
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+};
+
+export async function getGraphNeighbors(nodeId: string, depth = 2): Promise<GraphNeighborhood> {
+  const res = await request<{ data: GraphNeighborhood }>(
+    `/graph/neighbors/${encodeURIComponent(nodeId)}?depth=${depth}`,
+  );
+  return res.data;
+}
+
 export function formatCents(cents: number, compact = true): string {
   const dollars = cents / 100;
   if (compact && Math.abs(dollars) >= 1_000_000) {

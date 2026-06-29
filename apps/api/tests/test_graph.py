@@ -5,6 +5,8 @@ from __future__ import annotations
 import os
 
 import pytest
+from aurora_db.seed.nimbus import CRITICAL_VENDOR, TOP_CUSTOMER
+from aurora_graph.sync import ELECTRONICS_LINE
 from fastapi.testclient import TestClient
 
 from aurora.core.config import get_settings
@@ -69,3 +71,33 @@ def test_graph_neighbors(db_client: TestClient):
     )
     assert r.status_code == 200
     assert r.json()["data"]["node"]["id"] == node_id
+
+
+def test_vanguard_impact_chain_integration(db_client: TestClient):
+    """Golden integration test: Vanguard → Electronics → Continental chain via API."""
+    token = _login(db_client)
+    vendors = db_client.get(
+        "/api/v1/graph/nodes?label=Vendor",
+        headers={"Authorization": f"Bearer {token}"},
+    ).json()["data"]["nodes"]
+    critical = next(v for v in vendors if v["name"] == CRITICAL_VENDOR)
+    assert critical["criticality"] == "critical"
+
+    r = db_client.get(
+        f"/api/v1/graph/impact/{critical['id']}?depth=3",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 200
+    body = r.json()["data"]
+    impact = body["impact"]
+
+    electronics = [p for p in impact["affected_products"] if p.get("line") == ELECTRONICS_LINE]
+    assert len(electronics) >= 1
+
+    customer_names = {c["name"] for c in impact["affected_customers"]}
+    assert TOP_CUSTOMER in customer_names
+
+    dept_names = {d["name"] for d in impact["affected_departments"]}
+    assert "Supply Chain" in dept_names
+
+    assert impact["estimated_revenue_at_risk_cents"] > 0

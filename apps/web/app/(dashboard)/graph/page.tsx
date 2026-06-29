@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import GraphExplorer from "@/components/graph/GraphExplorer";
 import {
   formatCents,
   formatPct,
@@ -9,9 +10,12 @@ import {
   type GraphNode,
 } from "@/lib/api";
 
+type ViewMode = "neighborhood" | "impact";
+
 export default function GraphPage() {
   const [vendors, setVendors] = useState<GraphNode[]>([]);
   const [selected, setSelected] = useState<GraphNode | null>(null);
+  const [mode, setMode] = useState<ViewMode>("impact");
   const [impact, setImpact] = useState<Awaited<ReturnType<typeof getGraphImpact>> | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,11 +38,27 @@ export default function GraphPage() {
 
   return (
     <div className="p-8">
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">Knowledge Graph</h1>
-        <p className="text-sm text-text-muted">
-          Relationship map and vendor impact analysis — synced from the Nimbus tenant database.
-        </p>
+      <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Knowledge Graph</h1>
+          <p className="text-sm text-text-muted">
+            Relationship map and vendor impact analysis — synced from the Nimbus tenant database.
+          </p>
+        </div>
+        <div className="flex rounded-lg border border-border bg-surface p-1 text-sm">
+          {(["impact", "neighborhood"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setMode(m)}
+              className={`rounded px-3 py-1 capitalize ${
+                mode === m ? "bg-elevated text-text-primary" : "text-text-muted"
+              }`}
+            >
+              {m}
+            </button>
+          ))}
+        </div>
       </header>
 
       {error && (
@@ -47,10 +67,10 @@ export default function GraphPage() {
         </div>
       )}
 
-      <section className="grid gap-4 lg:grid-cols-3">
+      <section className="grid gap-4 lg:grid-cols-4">
         <div className="rounded-lg border border-border bg-surface p-4 lg:col-span-1">
           <h2 className="text-sm font-semibold">Vendors</h2>
-          <ul className="mt-3 space-y-2 text-sm">
+          <ul className="mt-3 max-h-[420px] space-y-2 overflow-y-auto text-sm">
             {vendors.map((v) => (
               <li key={v.id}>
                 <button
@@ -70,7 +90,23 @@ export default function GraphPage() {
           </ul>
         </div>
 
-        <div className="rounded-lg border border-border bg-surface p-4 lg:col-span-2">
+        <div className="rounded-lg border border-border bg-surface p-4 lg:col-span-3">
+          <h2 className="mb-3 text-sm font-semibold">
+            Graph explorer
+            {selected && (
+              <span className="ml-2 font-normal text-text-muted">— {selected.name}</span>
+            )}
+          </h2>
+          {selected ? (
+            <GraphExplorer rootNode={selected} mode={mode} depth={2} onNodeSelect={setSelected} />
+          ) : (
+            <p className="text-sm text-text-muted">Select a vendor to explore the graph.</p>
+          )}
+        </div>
+      </section>
+
+      <section className="mt-4 grid gap-4 lg:grid-cols-2">
+        <div className="rounded-lg border border-border bg-surface p-4">
           <h2 className="text-sm font-semibold">Impact analysis</h2>
           {selected && impact ? (
             <div className="mt-3 space-y-4 text-sm">
@@ -127,15 +163,21 @@ export default function GraphPage() {
             <p className="mt-3 text-sm text-text-muted">Loading impact…</p>
           )}
         </div>
-      </section>
 
-      <section className="mt-6 rounded-lg border border-border bg-surface p-5">
-        <h2 className="text-sm font-semibold">Phase 4 — Knowledge Graph</h2>
-        <p className="mt-2 text-sm text-text-muted">
-          Full React Flow explorer with neighborhood traversal ships in the next P4 iteration.
-          Impact analysis above validates the Vanguard Freight → product → customer dependency chain
-          from the demo dataset spec.
-        </p>
+        <div className="rounded-lg border border-border bg-surface p-4">
+          <h2 className="text-sm font-semibold">Demo dependency chain</h2>
+          <p className="mt-2 text-sm text-text-muted">
+            The Nimbus demo wires a critical vendor through product lines to top customers,
+            projects, and key engineers — visible in impact mode for{" "}
+            <span className="text-text-primary">Vanguard Freight Co.</span>
+          </p>
+          <ul className="mt-3 space-y-1 text-sm text-text-muted">
+            <li>→ Electronics Accessories product line</li>
+            <li>→ Continental Mercantile Group (~14% revenue)</li>
+            <li>→ Key Account Fulfillment project</li>
+            <li>→ Supply Chain department dependency</li>
+          </ul>
+        </div>
       </section>
     </div>
   );
