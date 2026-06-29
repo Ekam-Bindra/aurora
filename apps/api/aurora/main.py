@@ -17,6 +17,11 @@ from .api.v1 import api_router
 from .core.config import Settings, get_settings
 from .core.errors import register_exception_handlers
 from .core.logging import configure_logging, get_logger, new_request_id, set_request_id
+from .core.security_middleware import (
+    AuthRateLimitMiddleware,
+    SecurityHeadersMiddleware,
+    production_rate_limit,
+)
 from .persistence import dispose_database, init_database, is_database_enabled, session_scope
 from .repositories.memory import get_store
 from .seed.demo import seed_demo
@@ -84,13 +89,34 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
         lifespan=lifespan,
     )
 
+    cors_kwargs = {
+        "allow_origins": settings.cors_origins,
+        "allow_credentials": True,
+        "allow_methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        "allow_headers": ["Authorization", "Content-Type", "X-Request-Id"],
+        "expose_headers": ["X-Request-Id"],
+    }
+    if settings.is_production:
+        cors_kwargs["allow_methods"] = ["GET", "POST", "PUT", "PATCH", "DELETE"]
+
+    app.add_middleware(CORSMiddleware, **cors_kwargs)
+
+    if settings.security_headers_enabled:
+        app.add_middleware(SecurityHeadersMiddleware)
+
+    rate_limit = (
+        settings.auth_rate_limit_per_minute
+        if settings.auth_rate_limit_per_minute > 0
+        else production_rate_limit(settings)
+    )
     app.add_middleware(
-        CORSMiddleware,
-        allow_origins=settings.cors_origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-        expose_headers=["X-Request-Id"],
+        AuthRateLimitMiddleware,
+        max_requests=rate_limit,
+        paths=(
+            f"{settings.api_v1_prefix}/auth/login",
+            f"{settings.api_v1_prefix}/auth/refresh",
+            f"{settings.api_v1_prefix}/auth/oidc/callback",
+        ),
     )
 
     @app.middleware("http")

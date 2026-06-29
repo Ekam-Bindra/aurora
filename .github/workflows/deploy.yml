@@ -1,0 +1,81 @@
+name: deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        default: staging
+        type: choice
+        options:
+          - staging
+          - production
+      image_tag:
+        description: Docker image tag to deploy
+        required: true
+        default: latest
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
+  PROJECT_NAME: aurora
+
+jobs:
+  deploy:
+    name: Deploy to ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push API image
+        env:
+          ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          docker build -f infra/docker/api.Dockerfile -t $ECR_REGISTRY/${{ env.PROJECT_NAME }}-api:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/${{ env.PROJECT_NAME }}-api:$IMAGE_TAG
+
+      - name: Build and push web image
+        env:
+          ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          docker build -f infra/docker/web.Dockerfile -t $ECR_REGISTRY/${{ env.PROJECT_NAME }}-web:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/${{ env.PROJECT_NAME }}-web:$IMAGE_TAG
+
+      - name: Force ECS service redeployment
+        env:
+          CLUSTER: ${{ env.PROJECT_NAME }}-${{ inputs.environment }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          for SERVICE in api web; do
+            aws ecs update-service \
+              --cluster "$CLUSTER" \
+              --service "${{ env.PROJECT_NAME }}-${{ inputs.environment }}-${SERVICE}" \
+              --force-new-deployment
+          done
+          echo "Deployed tag ${IMAGE_TAG} to ${CLUSTER}"
+
+      - name: Deployment summary
+        run: |
+          echo "## Deploy complete" >> $GITHUB_STEP_SUMMARY
+          echo "- Environment: ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Image tag: ${{ inputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Region: ${{ env.AWS_REGION }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Run migrations manually if schema changed (see docs/DEPLOYMENT.md)." >> $GITHUB_STEP_SUMMARY

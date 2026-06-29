@@ -23,6 +23,7 @@ jobs:
           pip install -e ../../packages/ml
           pip install -e ../../packages/graph
           pip install -e ../../packages/simulations
+          pip install -e ../../packages/analytics
           pip install -e ".[dev]"
       - name: Lint (ruff)
         run: ruff check .
