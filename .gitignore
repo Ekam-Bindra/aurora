@@ -1,0 +1,39 @@
+# ── Python ───────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+dist/
+build/
+
+# ── Node / Next.js / Turbo ───────────────────────────
+node_modules/
+.next/
+out/
+.turbo/
+*.tsbuildinfo
+.pnpm-store/
+
+# ── Env & secrets (never commit real values) ─────────
+.env
+.env.*
+!.env.example
+
+# ── Local datastores / artifacts ─────────────────────
+*.duckdb
+data/
+minio-data/
+
+# ── OS / editors ─────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/

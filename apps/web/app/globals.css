@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  min-height: 100vh;
+}
+
+/* Tabular figures for dense numeric displays (terminal feel). */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
