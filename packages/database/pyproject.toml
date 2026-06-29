@@ -1,0 +1,46 @@
+[project]
+name = "aurora-db"
+version = "0.1.0"
+description = "AURORA — Unified Company Data Model (SQLAlchemy models, Alembic migrations, Nimbus seeder)"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "Proprietary" }
+dependencies = [
+    "SQLAlchemy>=2.0,<2.1",
+    "alembic>=1.13",
+    "numpy>=1.24",
+]
+
+[project.optional-dependencies]
+postgres = ["psycopg[binary]>=3.1"]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.4",
+]
+
+[project.scripts]
+aurora-db = "aurora_db.seed.__main__:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["aurora_db"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+# Alembic's generated migration/template files are excluded from import-sort/style rules.
+extend-exclude = ["aurora_db/migrations/versions"]
+
+[tool.ruff.lint]
+# "UP" (pyupgrade) is intentionally omitted: the package targets Python 3.9 and SQLAlchemy
+# resolves Mapped[...] annotations at runtime, where PEP 604 unions (X | None) fail on 3.9.
+select = ["E", "F", "I", "B"]
+ignore = ["B008"]

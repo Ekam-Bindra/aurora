@@ -24,6 +24,47 @@ jobs:
       - name: Test (pytest)
         run: pytest
 
+  database:
+    name: Database (lint + migrations + tests on Postgres)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/database
+    env:
+      # SQLAlchemy 2.0 + psycopg 3 DSN for the Postgres service below.
+      AURORA_PG_URL: postgresql+psycopg://aurora:aurora@localhost:5432/aurora
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: aurora
+          POSTGRES_PASSWORD: aurora
+          POSTGRES_DB: aurora
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U aurora"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: pip install -e ".[dev,postgres]"
+      - name: Lint (ruff)
+        run: ruff check .
+      - name: Migrate (alembic upgrade head on Postgres)
+        run: alembic -x url="$AURORA_PG_URL" upgrade head
+      - name: Seed + verify Nimbus at full scale (Postgres)
+        run: python -m aurora_db.seed --demo nimbus --verify --url "$AURORA_PG_URL"
+      - name: Test (pytest against Postgres)
+        env:
+          AURORA_TEST_DB_URL: ${{ env.AURORA_PG_URL }}
+        run: pytest
+
   web:
     name: Web (build)
     runs-on: ubuntu-latest

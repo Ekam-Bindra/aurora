@@ -67,9 +67,10 @@ top questions, and the permissions they get are detailed in
 
 ## Documentation index
 
-This repository is, in its current state, a **design and architecture foundation**.
-No application code ships yet; every document below is written to enough depth that an
-engineering team can build from it without re-researching decisions.
+This repository began as a **design and architecture foundation** and is now being built against
+those docs. `main` holds the design docs as the source of truth; the foundation API (Phase 1) and
+the PostgreSQL persistence layer (Phase 2) land on stacked feature branches. Every document below
+is written to enough depth that the implementation follows it without re-researching decisions.
 
 ### Start here
 - [`docs/00-overview-and-vision.md`](docs/00-overview-and-vision.md) — product vision, personas, modules, value proposition, glossary.
@@ -143,11 +144,13 @@ open http://localhost:3000        # login: demo@nimbus.test / see seed output
 
 | Area | Status |
 |------|--------|
-| Vision & architecture docs | **In progress (this session)** |
-| Data model & demo spec | **In progress (this session)** |
-| API contract | **In progress (this session)** |
-| Application code | Not started (designed here, built next) |
-| Infrastructure code | Not started (designed here, built next) |
+| Vision & architecture docs | **Complete** (`main`) |
+| Data model & demo spec | **Complete** (`main`) |
+| API contract | **Complete** (`main`) |
+| Backend API — Phase 1 | **Implemented** — FastAPI auth/RBAC, multi-tenancy, seeded demo, tests (`apps/api`) |
+| Persistence — Phase 2 | **Implemented** — SQLAlchemy models, Alembic, tenant repositories, Nimbus seeder (`packages/database`) |
+| Web shell — Phase 1 | **Scaffolded** — Next.js dashboard shell (`apps/web`) |
+| Infrastructure code | Docker Compose + GitHub Actions CI in place; cloud IaC next |
 
 ---
 

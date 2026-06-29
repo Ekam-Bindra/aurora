@@ -28,6 +28,9 @@ out/
 
 # ── Local datastores / artifacts ─────────────────────
 *.duckdb
+*.db
+*.sqlite
+*.sqlite3
 data/
 minio-data/
 
