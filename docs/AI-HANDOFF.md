@@ -11,8 +11,8 @@
 |------|-------|
 | **Repo** | `/Users/ekambindra/Projects/aurora` |
 | **GitHub** | https://github.com/Ekam-Bindra/aurora |
-| **`main` commit** | `bf8fb31` — All 9 phases merged (PR #9) |
-| **Active branch** | `feat/deploy-readiness` |
+| **`main` commit** | `ba8daff` — Phases 1–9 + CI + E2E merged |
+| **Active branch** | `main` (PR #16 deploy-readiness pending) |
 | **Next work** | First AWS deploy: `./scripts/deploy-check.sh` → `docs/DEPLOY-CHECKLIST.md` |
 | **Demo login** | `cfo@nimbus.test` / `aurora-demo-2026` |
 | **Local API** | `./scripts/local-run.sh` or uvicorn on port 8000 |
@@ -22,15 +22,13 @@
 
 - ✅ Full design docs (12 documents)
 - ✅ P1–P9 merged to `main` (through PR #9)
-- ✅ **Deploy readiness:** `scripts/deploy-check.sh`, `docs/DEPLOY-CHECKLIST.md`, Terraform fmt/validate green, load-test smoke passed locally
-- ✅ Terraform AWS (VPC, ECS, ALB, RDS, ECR, Secrets Manager, S3)
-- ✅ `docker-compose.prod.yml`, ClickHouse profile, OIDC SSO, security hardening
-- ✅ Load tests (`scripts/load-test.sh`, `tests/load/smoke.js`), deploy workflow (`.github/workflows/deploy.yml`)
+- ✅ **CI (PR #15):** analytics job, `docs/CI.md`, 116 tests green
+- ✅ **E2E (PR #17):** Playwright suite in `apps/web/e2e/`, `pnpm test:e2e`, `docs/E2E.md`
+- ✅ **Deploy readiness (PR #16):** `scripts/deploy-check.sh`, `docs/DEPLOY-CHECKLIST.md`, Terraform validate green
 - ✅ API **78 pytest** / ruff green
 
 ### What's not done
 
-- ⏳ E2E demos (upload CSV, generate board pack)
 - ⏳ First production AWS deploy (`terraform apply` + deploy workflow — checklist ready)
 
 ---
@@ -71,12 +69,17 @@
 
 | Area | Files |
 |------|-------|
+<<<<<<< HEAD
 | Deploy | `docs/DEPLOYMENT.md`, `docs/DEPLOY-CHECKLIST.md`, `scripts/deploy-check.sh`, `infra/terraform/`, `.github/workflows/deploy.yml` |
+=======
+| Deploy | `docs/DEPLOYMENT.md`, `infra/terraform/`, `.github/workflows/deploy.yml` |
+>>>>>>> origin/main
 | **Local CI** | `docs/CI.md` — mirror `.github/workflows/ci.yml` locally |
 | Analytics | `packages/analytics/aurora_analytics/` |
 | SSO | `apps/api/aurora/modules/auth/oidc_router.py`, `core/oidc.py` |
 | Security | `apps/api/aurora/core/security_middleware.py`, `core/config.py` |
 | Load tests | `scripts/load-test.sh`, `tests/load/smoke.js` |
+| E2E | `apps/web/e2e/`, `docs/E2E.md`, `scripts/e2e-api.sh` |
 
 ---
 
@@ -84,7 +87,11 @@
 
 | Date | Update |
 |------|--------|
+<<<<<<< HEAD
 | 2026-06-29 | Deploy readiness: preflight script, first-deploy checklist, Terraform fmt fix, workflow ECS wait + docs |
+=======
+| 2026-06-29 | E2E: Playwright suite (`apps/web/e2e`), `pnpm test:e2e`, `docs/E2E.md` |
+>>>>>>> origin/main
 | 2026-06-29 | P9: AWS Terraform, OIDC, security hardening, ClickHouse analytics path, 78 pytest |
 | 2026-06-29 | P8 backend: board reports + admin APIs, audit logging, 67 pytest |
 | 2026-06-28 | Initial handoff; P3 merged; P4 started; estimates added |

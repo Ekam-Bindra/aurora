@@ -173,7 +173,21 @@ Scenarios: health, login, metrics overview, board report list.
 
 ---
 
-## 6. Security scanning
+## 6. End-to-end (Playwright) tests
+
+Browser tests for login, data ingestion, board reports, and admin audit log.
+
+```bash
+cd apps/web
+pnpm test:e2e:install   # once per machine
+pnpm test:e2e           # starts API + web if not already running
+```
+
+Full guide: [`docs/E2E.md`](E2E.md)
+
+---
+
+## 7. Security scanning
 
 - **Dependabot:** `.github/dependabot.yml` monitors Python and npm dependencies weekly
 - **ECR:** Image scan on push enabled in Terraform
@@ -181,7 +195,7 @@ Scenarios: health, login, metrics overview, board report list.
 
 ---
 
-## 7. Troubleshooting
+## 8. Troubleshooting
 
 | Symptom | Check |
 |---------|-------|

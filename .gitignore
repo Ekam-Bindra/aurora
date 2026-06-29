@@ -46,6 +46,9 @@ infra/terraform/terraform.tfvars
 # ── OS / editors ─────────────────────────────────────
 .DS_Store
 Thumbs.db
+test-results/
+playwright-report/
+playwright/.cache/
 *.log
 .idea/
 .vscode/
