@@ -11,9 +11,9 @@
 |------|-------|
 | **Repo** | `/Users/ekambindra/Projects/aurora` |
 | **GitHub** | https://github.com/Ekam-Bindra/aurora |
-| **`main` commit** | `27bc579` — Phases 1–8 merged (PR #8) |
-| **Active branch** | `feat/phase-9-aws-hardening` |
-| **Next work** | Merge PR #9; optional E2E demos |
+| **`main` commit** | `bf8fb31` — All 9 phases merged (PR #9) |
+| **Active branch** | `feat/e2e-tests` |
+| **Next work** | First AWS deploy via `docs/DEPLOYMENT.md` |
 | **Demo login** | `cfo@nimbus.test` / `aurora-demo-2026` |
 | **Local API** | `./scripts/local-run.sh` or uvicorn on port 8000 |
 | **Deploy docs** | `docs/DEPLOYMENT.md` |
@@ -22,17 +22,13 @@
 
 - ✅ Full design docs (12 documents)
 - ✅ P1–P8 merged to `main` (through PR #8)
-- ✅ **P9 (branch):** Terraform AWS (VPC, ECS, ALB, RDS, ECR, Secrets Manager, S3)
-- ✅ **P9:** `docker-compose.prod.yml`, ClickHouse profile, `packages/analytics`
-- ✅ **P9:** OIDC SSO (`/auth/oidc/*`), security headers, auth rate limiting
-- ✅ **P9:** Load tests (`scripts/load-test.sh`, `tests/load/smoke.js`)
-- ✅ **P9:** Deploy workflow stub (`.github/workflows/deploy.yml`)
-- ✅ API **78 pytest** / ruff green (was 67)
+- ✅ **P9 merged (PR #9):** Terraform AWS, prod compose, ClickHouse analytics path, OIDC SSO, security hardening, load tests, `docs/DEPLOYMENT.md`
+- ✅ **E2E (branch):** Playwright suite in `apps/web/e2e/`, `pnpm test:e2e`, `docs/E2E.md`
+- ✅ API **78 pytest** / ruff green
 
 ### What's not done
 
-- ⏳ E2E demos (upload CSV, generate board pack)
-- ⏳ P9 merge to `main` (PR #9)
+- ⏳ First production AWS deploy (`terraform apply` + deploy workflow)
 
 ---
 
@@ -78,6 +74,7 @@
 | SSO | `apps/api/aurora/modules/auth/oidc_router.py`, `core/oidc.py` |
 | Security | `apps/api/aurora/core/security_middleware.py`, `core/config.py` |
 | Load tests | `scripts/load-test.sh`, `tests/load/smoke.js` |
+| E2E | `apps/web/e2e/`, `docs/E2E.md`, `scripts/e2e-api.sh` |
 
 ---
 
@@ -85,6 +82,7 @@
 
 | Date | Update |
 |------|--------|
+| 2026-06-29 | E2E: Playwright suite (`apps/web/e2e`), `pnpm test:e2e`, `docs/E2E.md` |
 | 2026-06-29 | P9: AWS Terraform, OIDC, security hardening, ClickHouse analytics path, 78 pytest |
 | 2026-06-29 | P8 backend: board reports + admin APIs, audit logging, 67 pytest |
 | 2026-06-28 | Initial handoff; P3 merged; P4 started; estimates added |
