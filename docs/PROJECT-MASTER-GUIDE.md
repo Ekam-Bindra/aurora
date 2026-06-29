@@ -28,12 +28,12 @@ impact analysis, Monte Carlo simulations, and an explainable executive AI agent.
 | `apps/api` | FastAPI backend — auth, RBAC, modules, OpenAPI |
 | `apps/web` | Next.js 14 App Router executive UI |
 | `packages/database` | SQLAlchemy models, Alembic, Nimbus seeder (`aurora_db`) |
-| `packages/ml` | Financial marts, calculators, metric registry (`aurora_ml`) |
-| `packages/graph` | Knowledge graph sync + queries (`aurora_graph`) — **Phase 4** |
+| `packages/ml` | Financial marts, calculators, forecast + risk engines (`aurora_ml`) |
+| `packages/graph` | Knowledge graph sync + queries (`aurora_graph`) |
 | `packages/config` | Shared ESLint/TS/Tailwind presets |
 | `infra/docker` | Docker Compose (Postgres, Neo4j, Redis, MinIO, nginx) |
 | `scripts/local-run.sh` | SQLite dev API without Docker |
-| `.github/workflows/ci.yml` | CI: api, database, ml, web |
+| `.github/workflows/ci.yml` | CI: api, database, ml, graph, web |
 | `docs/` | Architecture, data model, API spec, roadmap |
 
 **GitHub:** https://github.com/Ekam-Bindra/aurora (private)
@@ -49,8 +49,8 @@ impact analysis, Monte Carlo simulations, and an explainable executive AI agent.
 | **P1** | Foundation — monorepo, auth/RBAC, web shell, Docker, CI | ✅ Done |
 | **P2** | Data model, Alembic, Nimbus seeder, tenant repos | ✅ Done |
 | **P3** | Financial intelligence — marts, `/metrics/*`, Financials UI | ✅ Done (`0868194`) |
-| **P4** | Knowledge graph — sync, `/graph/*`, Graph explorer | 🔄 PR open (impact UI done; React Flow next) |
-| **P5** | Forecasting + Risk Genome | ⏳ Pending |
+| **P4** | Knowledge graph — sync, `/graph/*`, React Flow explorer | ✅ Done on branch — merge PR #4 |
+| **P5** | Forecasting + Risk Genome | 🔄 Foundation on `feat/phase-5-forecasting-risk` |
 | **P6** | Simulation + AI Agent + full dashboard → **MVP** | ⏳ Pending |
 | **P7** | Ingestion + live connectors | Post-MVP |
 | **P8** | Board reports + Admin console | Post-MVP |
@@ -206,6 +206,8 @@ Full list: `.env.example`.
 | Health | `/health` | — | — |
 | Metrics | `/metrics/*`, `/financials/*`, `/explain/metric/*` | `read:financials` | `DATABASE_URL` |
 | Graph | `/graph/*` | `read:graph` | `DATABASE_URL` |
+| Forecasts | `/forecasts/*` | `run:forecast` / `read:financials` | `DATABASE_URL` |
+| Risk | `/risk/*` | `read:financials` / `run:forecast` | `DATABASE_URL` |
 
 OpenAPI: `/api/v1/docs` when API is running.
 
