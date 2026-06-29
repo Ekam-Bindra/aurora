@@ -12,7 +12,7 @@ from ...core.errors import NotFound, Unprocessable
 from ...core.logging import get_request_id
 from ...core.rbac import AuthContext, Permission
 from ...deps import get_db_session, require_permission
-from ...services.forecast import create_forecast, get_forecast, list_forecasts
+from ...services.forecast import create_forecast, explain_forecast, get_forecast, list_forecasts
 
 router = APIRouter(tags=["forecasts"])
 
@@ -70,3 +70,17 @@ def list_forecast_jobs(
 ) -> dict:
     items = list_forecasts(context.tenant_id)
     return {"data": {"forecasts": items}, "meta": {"request_id": get_request_id()}}
+
+
+@router.get("/explain/forecast/{forecast_id}")
+def explain_forecast_endpoint(
+    forecast_id: str,
+    context: AuthContext = Depends(require_permission(Permission.READ_FINANCIALS)),
+) -> dict:
+    data = explain_forecast(forecast_id)
+    if data is None:
+        raise NotFound("Forecast not found")
+    fc = get_forecast(forecast_id)
+    if fc is None or fc.get("company_id") != context.tenant_id:
+        raise NotFound("Forecast not found")
+    return {"data": data, "meta": {"request_id": get_request_id()}}

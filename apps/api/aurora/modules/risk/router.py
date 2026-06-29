@@ -11,7 +11,13 @@ from ...core.errors import NotFound, Unprocessable
 from ...core.logging import get_request_id
 from ...core.rbac import AuthContext, Permission
 from ...deps import get_db_session, require_any_permission, require_permission
-from ...services.risk import compute_genome, genome_history, get_dimension, get_genome
+from ...services.risk import (
+    compute_genome,
+    explain_risk_signal,
+    genome_history,
+    get_dimension,
+    get_genome,
+)
 
 router = APIRouter(tags=["risk"])
 
@@ -72,3 +78,17 @@ def risk_recompute(
         "data": {"status": "completed", "computed_at": data["computed_at"]},
         "meta": {"request_id": get_request_id()},
     }
+
+
+@router.get("/explain/risk/{signal_id}")
+def explain_risk_endpoint(
+    signal_id: str,
+    context: AuthContext = Depends(_READ_RISK),
+    session: Session = Depends(_require_db),
+) -> dict:
+    if get_genome(context.tenant_id) is None:
+        compute_genome(session, context.tenant_id)
+    data = explain_risk_signal(context.tenant_id, signal_id)
+    if data is None:
+        raise NotFound(f"Risk signal '{signal_id}' not found")
+    return {"data": data, "meta": {"request_id": get_request_id()}}

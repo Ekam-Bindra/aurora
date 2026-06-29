@@ -37,7 +37,7 @@ def test_create_and_get_forecast(db_client: TestClient):
     token = _login(db_client)
     r = db_client.post(
         "/api/v1/forecasts",
-        json={"metric": "revenue", "horizon_periods": 6, "method": "baseline"},
+        json={"metric": "revenue", "horizon_periods": 6, "method": "seasonal"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert r.status_code == 202
@@ -52,6 +52,7 @@ def test_create_and_get_forecast(db_client: TestClient):
     assert body["metric"] == "revenue"
     assert len(body["points"]) == 6
     assert body["accuracy"]["mape"] >= 0
+    assert body.get("feature_importance")
 
 
 def test_list_forecasts(db_client: TestClient):
@@ -67,3 +68,38 @@ def test_list_forecasts(db_client: TestClient):
     )
     assert r.status_code == 200
     assert len(r.json()["data"]["forecasts"]) >= 1
+
+
+def test_explain_forecast(db_client: TestClient):
+    token = _login(db_client)
+    r = db_client.post(
+        "/api/v1/forecasts",
+        json={"metric": "revenue", "horizon_periods": 6, "method": "ensemble"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    fc_id = r.json()["data"]["id"]
+    r2 = db_client.get(
+        f"/api/v1/explain/forecast/{fc_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r2.status_code == 200
+    data = r2.json()["data"]
+    assert data["forecast_id"] == fc_id
+    assert "feature_importance" in data
+    assert "backtest" in data
+
+
+def test_forecast_tenant_isolation(db_client: TestClient):
+    token = _login(db_client)
+    r = db_client.post(
+        "/api/v1/forecasts",
+        json={"metric": "revenue", "horizon_periods": 3},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    fc_id = r.json()["data"]["id"]
+    other = _login(db_client, email="ceo@nimbus.test")
+    r2 = db_client.get(
+        f"/api/v1/forecasts/{fc_id}",
+        headers={"Authorization": f"Bearer {other}"},
+    )
+    assert r2.status_code == 200

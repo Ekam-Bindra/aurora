@@ -36,9 +36,32 @@ def create_forecast(
     _forecasts[result.id] = payload
     return payload
 
+
 def get_forecast(forecast_id: str) -> Optional[Dict[str, Any]]:
     return _forecasts.get(forecast_id)
 
 
 def list_forecasts(company_id: str) -> List[Dict[str, Any]]:
     return [f for f in _forecasts.values() if f.get("company_id") == company_id]
+
+
+def explain_forecast(forecast_id: str) -> Optional[Dict[str, Any]]:
+    fc = _forecasts.get(forecast_id)
+    if not fc:
+        return None
+    backtest = fc.get("backtest_detail") or {}
+    accuracy = fc.get("accuracy") or {}
+    return {
+        "forecast_id": forecast_id,
+        "method": fc.get("method"),
+        "model_version": fc.get("model_version"),
+        "feature_importance": fc.get("feature_importance") or [],
+        "backtest": {
+            "windows": backtest.get("windows") or accuracy.get("backtest_windows", 0),
+            "mape": backtest.get("mape") or accuracy.get("mape"),
+            "coverage_80pct": backtest.get("coverage_80pct") or accuracy.get("interval_coverage"),
+        },
+        "evidence": [
+            {"type": "series", "ref": f"/metrics/{fc.get('metric', 'revenue')}/series"},
+        ],
+    }
