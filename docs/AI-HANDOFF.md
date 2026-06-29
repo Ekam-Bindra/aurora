@@ -11,7 +11,7 @@
 |------|-------|
 | **Repo (local)** | `/Users/ekambindra/Projects/aurora` |
 | **GitHub** | https://github.com/Ekam-Bindra/aurora |
-| **`main` commit** | `d64e86c` — all phases + post-MVP merged (PRs #4–#11, #15–#17) |
+| **`main` commit** | `d0df9fc` — session handoff; all phases + post-MVP merged |
 | **Branch** | `main` — all phases + post-MVP work merged |
 | **Next work** | First AWS production deploy |
 | **Demo login** | `cfo@nimbus.test` / `aurora-demo-2026` |
