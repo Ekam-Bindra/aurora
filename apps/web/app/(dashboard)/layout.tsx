@@ -17,7 +17,7 @@ const NAV: NavItem[] = [
   { href: "/simulations", label: "Simulations", permission: "run:simulation", ready: true },
   { href: "/agent", label: "AI Agent", permission: "use:ai_agent", ready: true },
   { href: "/reports", label: "Board Reports", permission: "create:board_report", ready: false },
-  { href: "/data", label: "Data Sources", permission: "manage:data_sources", ready: false },
+  { href: "/data", label: "Data Sources", permission: "manage:data_sources", ready: true },
   { href: "/admin", label: "Admin", permission: "manage:users", ready: false },
 ];
 

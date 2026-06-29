@@ -32,6 +32,8 @@ out/
 *.sqlite
 *.sqlite3
 data/
+!apps/web/app/**/data/
+!apps/web/app/**/data/**
 minio-data/
 
 # ── OS / editors ─────────────────────────────────────
