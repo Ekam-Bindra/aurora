@@ -9,6 +9,10 @@ from fastapi.testclient import TestClient
 
 from aurora.core.config import get_settings
 from aurora.main import create_app
+from aurora.repositories.memory import get_store
+from aurora.seed.demo import seed_demo
+
+from tests.conftest import login
 
 
 @pytest.fixture()
@@ -72,12 +76,11 @@ def test_explain_metric(db_client: TestClient):
 
 
 def test_metrics_require_database():
+    os.environ.pop("DATABASE_URL", None)
     get_settings.cache_clear()
+    seed_demo(get_store(), "test-password-123", force=True)
     with TestClient(create_app()) as client:
-        token = client.post(
-            "/api/v1/auth/login",
-            json={"email": "cfo@nimbus.test", "password": "test-password-123"},
-        ).json()["access_token"]
+        token = login(client, "cfo@nimbus.test").json()["access_token"]
         r = client.get(
             "/api/v1/metrics/overview",
             headers={"Authorization": f"Bearer {token}"},

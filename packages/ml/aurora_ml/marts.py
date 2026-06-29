@@ -8,13 +8,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 import duckdb
+from aurora_db.models import Expense, RevenueRecord
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
-
-from aurora_db.models import Expense, RevenueRecord
 
 # Matches Nimbus seeder (packages/database/aurora_db/seed/nimbus.py).
 START_CASH_CENTS = int(6_500_000 * 100)

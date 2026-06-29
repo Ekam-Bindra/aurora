@@ -148,7 +148,8 @@ open http://localhost:3000        # login: demo@nimbus.test / see seed output
 | API contract | **Complete** (`main`) |
 | Backend API — Phase 1 | **Implemented** — FastAPI auth/RBAC, multi-tenancy, seeded demo, tests (`apps/api`) |
 | Persistence — Phase 2 | **Implemented** — SQLAlchemy models, Alembic, tenant repositories, Nimbus seeder (`packages/database`) |
-| Financial intelligence — Phase 3 | **In progress** — DuckDB marts, calculators (`packages/ml`), `/metrics/*` + `/financials/*` APIs, live dashboard KPIs |
+| Financial intelligence — Phase 3 | **Implemented** — DuckDB marts, calculators (`packages/ml`), `/metrics/*` + `/financials/*` APIs, live dashboard KPIs |
+| Knowledge graph — Phase 4 | **In progress** — `packages/graph`, `/graph/*`, impact analysis UI (`feat/phase-4-knowledge-graph`) |
 | Web shell — Phase 1 | **Scaffolded** — Next.js dashboard shell (`apps/web`) |
 | Infrastructure code | Docker Compose + GitHub Actions CI in place; cloud IaC next |
 

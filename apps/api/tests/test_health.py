@@ -25,3 +25,9 @@ def test_request_id_header_present(client):
 def test_inbound_request_id_is_echoed(client):
     resp = client.get("/api/v1/health", headers={"X-Request-Id": "req_test_123"})
     assert resp.headers["X-Request-Id"] == "req_test_123"
+
+
+def test_root_redirects_to_docs(client):
+    resp = client.get("/", follow_redirects=False)
+    assert resp.status_code == 307
+    assert resp.headers["location"] == "/api/v1/docs"

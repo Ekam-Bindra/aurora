@@ -21,6 +21,7 @@ jobs:
         run: |
           pip install -e ../../packages/database
           pip install -e ../../packages/ml
+          pip install -e ../../packages/graph
           pip install -e ".[dev]"
       - name: Lint (ruff)
         run: ruff check .
@@ -62,7 +63,7 @@ jobs:
       - name: Migrate (alembic upgrade head on Postgres)
         run: alembic -x url="$AURORA_PG_URL" upgrade head
       - name: Seed + verify Nimbus at full scale (Postgres)
-        run: python -m aurora_db.seed --demo nimbus --verify --url "$AURORA_PG_URL"
+        run: python -m aurora_db.seed --demo nimbus --verify --url "$AURORA_PG_URL" --scale 1.0
       - name: Test (pytest against Postgres)
         env:
           AURORA_TEST_DB_URL: ${{ env.AURORA_PG_URL }}
@@ -88,9 +89,31 @@ jobs:
       - name: Test (pytest)
         run: pytest
 
+  graph:
+    name: Graph (lint + tests)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/graph
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: |
+          pip install -e ../database
+          pip install -e ".[dev]"
+      - name: Lint (ruff)
+        run: ruff check .
+      - name: Test (pytest)
+        run: pytest
+
   web:
     name: Web (build)
     runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_API_URL: http://localhost/api/v1
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -101,6 +124,6 @@ jobs:
           node-version: 20
           cache: pnpm
       - name: Install
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
       - name: Build
         run: pnpm --filter @aurora/web build

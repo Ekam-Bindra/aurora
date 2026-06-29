@@ -5,7 +5,9 @@
  * `packages/types` (OpenAPI -> TS), per docs/architecture/folder-structure.md.
  */
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost/api/v1";
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ??
+  (typeof window !== "undefined" ? "/api/v1" : "http://localhost:8000/api/v1");
 const TOKEN_KEY = "aurora.access_token";
 
 export type AuthUser = {
@@ -159,6 +161,59 @@ export async function getCashSummary(): Promise<CashSummary> {
 
 export async function getConcentration(): Promise<ConcentrationData> {
   const res = await request<{ data: ConcentrationData }>("/metrics/concentration");
+  return res.data;
+}
+
+export type GraphNode = {
+  id: string;
+  label: string;
+  name: string;
+  criticality?: string;
+  line?: string;
+};
+
+export type GraphImpact = {
+  node: GraphNode | null;
+  impact: {
+    affected_products: GraphNode[];
+    affected_customers: Array<GraphNode & { revenue_share?: number; amount_cents?: number }>;
+    affected_departments: GraphNode[];
+    affected_employees: GraphNode[];
+    estimated_revenue_at_risk_cents: number;
+  };
+};
+
+export async function getGraphNodes(label?: string): Promise<GraphNode[]> {
+  const q = label ? `?label=${encodeURIComponent(label)}` : "";
+  const res = await request<{ data: { nodes: GraphNode[] } }>(`/graph/nodes${q}`);
+  return res.data.nodes;
+}
+
+export async function getGraphImpact(nodeId: string, depth = 2): Promise<GraphImpact> {
+  const res = await request<{ data: GraphImpact }>(
+    `/graph/impact/${encodeURIComponent(nodeId)}?depth=${depth}`,
+  );
+  return res.data;
+}
+
+export type GraphEdge = {
+  id?: string;
+  source_id: string;
+  target_id: string;
+  type: string;
+  properties?: Record<string, unknown>;
+};
+
+export type GraphNeighborhood = {
+  node: GraphNode | null;
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+};
+
+export async function getGraphNeighbors(nodeId: string, depth = 2): Promise<GraphNeighborhood> {
+  const res = await request<{ data: GraphNeighborhood }>(
+    `/graph/neighbors/${encodeURIComponent(nodeId)}?depth=${depth}`,
+  );
   return res.data;
 }
 
