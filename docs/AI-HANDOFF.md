@@ -69,11 +69,7 @@
 
 | Area | Files |
 |------|-------|
-<<<<<<< HEAD
 | Deploy | `docs/DEPLOYMENT.md`, `docs/DEPLOY-CHECKLIST.md`, `scripts/deploy-check.sh`, `infra/terraform/`, `.github/workflows/deploy.yml` |
-=======
-| Deploy | `docs/DEPLOYMENT.md`, `infra/terraform/`, `.github/workflows/deploy.yml` |
->>>>>>> origin/main
 | **Local CI** | `docs/CI.md` — mirror `.github/workflows/ci.yml` locally |
 | Analytics | `packages/analytics/aurora_analytics/` |
 | SSO | `apps/api/aurora/modules/auth/oidc_router.py`, `core/oidc.py` |
@@ -87,11 +83,8 @@
 
 | Date | Update |
 |------|--------|
-<<<<<<< HEAD
 | 2026-06-29 | Deploy readiness: preflight script, first-deploy checklist, Terraform fmt fix, workflow ECS wait + docs |
-=======
 | 2026-06-29 | E2E: Playwright suite (`apps/web/e2e`), `pnpm test:e2e`, `docs/E2E.md` |
->>>>>>> origin/main
 | 2026-06-29 | P9: AWS Terraform, OIDC, security hardening, ClickHouse analytics path, 78 pytest |
 | 2026-06-29 | P8 backend: board reports + admin APIs, audit logging, 67 pytest |
 | 2026-06-28 | Initial handoff; P3 merged; P4 started; estimates added |
