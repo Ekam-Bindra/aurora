@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
+import { ExplainProvider } from "@/components/explain/ExplainProvider";
 import { clearToken, getMe, getToken, type AuthUser } from "@/lib/api";
 
 type NavItem = { href: string; label: string; permission: string | null; ready: boolean };
@@ -13,8 +14,8 @@ const NAV: NavItem[] = [
   { href: "/forecasting", label: "Forecasting", permission: "read:financials", ready: true },
   { href: "/risk", label: "Risk Genome", permission: "read:operations", ready: true },
   { href: "/graph", label: "Knowledge Graph", permission: "read:graph", ready: true },
-  { href: "/simulations", label: "Simulations", permission: "run:simulation", ready: false },
-  { href: "/agent", label: "AI Agent", permission: "use:ai_agent", ready: false },
+  { href: "/simulations", label: "Simulations", permission: "run:simulation", ready: true },
+  { href: "/agent", label: "AI Agent", permission: "use:ai_agent", ready: true },
   { href: "/reports", label: "Board Reports", permission: "create:board_report", ready: false },
   { href: "/data", label: "Data Sources", permission: "manage:data_sources", ready: false },
   { href: "/admin", label: "Admin", permission: "manage:users", ready: false },
@@ -47,6 +48,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     item.permission === null || (user?.permissions.includes(item.permission) ?? false);
 
   return (
+    <ExplainProvider>
     <div className="flex min-h-screen">
       <aside className="flex w-60 flex-col border-r border-border bg-surface">
         <div className="px-5 py-5">
@@ -93,5 +95,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       </aside>
       <main className="flex-1 overflow-auto">{children}</main>
     </div>
+    </ExplainProvider>
   );
 }

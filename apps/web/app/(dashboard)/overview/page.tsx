@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import AgentChat from "@/components/agent/AgentChat";
+import RecommendationCard from "@/components/simulation/RecommendationCard";
+import { useExplain } from "@/components/explain/ExplainProvider";
 import {
   formatCents,
   formatDimensionLabel,
@@ -15,6 +18,7 @@ import {
   type AuthUser,
   type MetricsOverviewData,
   type RiskGenomeData,
+  type SimulationRecommendation,
 } from "@/lib/api";
 
 type Kpi = { label: string; value: string; delta?: string; tone?: "positive" | "negative" | "warning" };
@@ -82,6 +86,27 @@ function buildKpis(data: MetricsOverviewData | null): Kpi[] {
   return items;
 }
 
+function buildRecommendations(risk: RiskGenomeData | null): SimulationRecommendation[] {
+  if (!risk) return [];
+  const recs: SimulationRecommendation[] = [];
+  let priority = 1;
+  for (const dim of [...risk.dimensions].sort((a, b) => b.score - a.score)) {
+    for (const action of dim.recommended_actions.slice(0, 1)) {
+      recs.push({
+        title: action,
+        priority: priority++,
+        expected_impact: {
+          metric: dim.dimension,
+          direction: "down",
+          magnitude: `−${Math.min(dim.score * 0.1, 15).toFixed(0)} pts`,
+        },
+      });
+    }
+    if (recs.length >= 4) break;
+  }
+  return recs;
+}
+
 const toneClass: Record<string, string> = {
   positive: "text-positive",
   negative: "text-negative",
@@ -89,11 +114,13 @@ const toneClass: Record<string, string> = {
 };
 
 export default function OverviewPage() {
+  const { openExplain } = useExplain();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [overview, setOverview] = useState<MetricsOverviewData | null>(null);
   const [risk, setRisk] = useState<RiskGenomeData | null>(null);
   const [forecastCount, setForecastCount] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showAgent, setShowAgent] = useState(false);
 
   useEffect(() => {
     getMe().then(setUser).catch(() => undefined);
@@ -109,6 +136,9 @@ export default function OverviewPage() {
   }, []);
 
   const kpis = buildKpis(overview);
+  const recommendations = useMemo(() => buildRecommendations(risk), [risk]);
+  const canSimulate = user?.permissions.includes("run:simulation");
+  const canAgent = user?.permissions.includes("use:ai_agent");
 
   return (
     <div className="p-8">
@@ -134,7 +164,16 @@ export default function OverviewPage() {
         ) : (
           kpis.map((kpi) => (
             <div key={kpi.label} className="rounded-lg border border-border bg-surface p-4">
-              <div className="text-xs text-text-muted">{kpi.label}</div>
+              <div className="flex items-start justify-between">
+                <div className="text-xs text-text-muted">{kpi.label}</div>
+                <button
+                  type="button"
+                  onClick={() => openExplain("/explain/metric/overview")}
+                  className="text-[10px] text-brand-accent hover:underline"
+                >
+                  Explain
+                </button>
+              </div>
               <div className="mt-1 text-2xl font-bold tabular-nums">{kpi.value}</div>
               {kpi.delta && (
                 <div className={`mt-1 text-xs ${kpi.tone ? toneClass[kpi.tone] : "text-text-muted"}`}>
@@ -194,20 +233,55 @@ export default function OverviewPage() {
         </div>
       </section>
 
-      <section className="mt-8 rounded-lg border border-border bg-surface p-5">
-        <h2 className="text-sm font-semibold">Phase 3 — Financial Intelligence</h2>
-        <p className="mt-2 text-sm text-text-muted">
-          KPIs above are computed live from the Nimbus demo tenant via DuckDB marts and the
-          financial engine in <span className="text-text-primary">packages/ml</span>. Forecasting,
-          risk genome, simulator, and AI agent follow per the implementation roadmap.
-        </p>
-        {user && (
-          <p className="mt-3 text-xs text-text-muted">
-            Your permissions:{" "}
-            <span className="text-text-primary">{user.permissions.join(", ")}</span>
-          </p>
-        )}
-      </section>
+      {recommendations.length > 0 && (
+        <section className="mt-6">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold">Top recommendations</h2>
+            {canSimulate && (
+              <Link href="/simulations" className="text-xs text-brand-accent hover:underline">
+                Open simulator →
+              </Link>
+            )}
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            {recommendations.map((rec) => (
+              <RecommendationCard key={rec.title} rec={rec} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {canAgent && (
+        <section className="mt-6 rounded-lg border border-border bg-surface p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-semibold">Ask AURORA</h2>
+              <p className="mt-1 text-xs text-text-muted">
+                Natural-language questions with grounded citations and tool calls.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              {!showAgent && (
+                <button
+                  type="button"
+                  onClick={() => setShowAgent(true)}
+                  className="rounded-md border border-border px-3 py-1.5 text-xs text-brand-accent hover:bg-elevated"
+                >
+                  Ask a question
+                </button>
+              )}
+              <Link href="/agent" className="rounded-md bg-brand-primary px-3 py-1.5 text-xs text-white">
+                Full agent →
+              </Link>
+            </div>
+          </div>
+          {showAgent && (
+            <div className="mt-4">
+              <AgentChat compact />
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 }

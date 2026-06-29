@@ -367,3 +367,260 @@ export function severityTone(severity: string): "positive" | "warning" | "negati
       return "muted";
   }
 }
+
+// --- Scenarios & Simulations (Phase 6) ---
+
+export type ShockType = "customer_churn" | "expense_change";
+
+export type CustomerChurnShock = {
+  type: "customer_churn";
+  customer_id: string;
+  probability?: number;
+};
+
+export type ExpenseChangeShock = {
+  type: "expense_change";
+  category: string;
+  department_code?: string;
+  pct_change: number;
+};
+
+export type ScenarioShock = CustomerChurnShock | ExpenseChangeShock;
+
+export type ScenarioCreateParams = {
+  name: string;
+  horizon_periods?: number;
+  trials?: number;
+  assumptions: {
+    shocks: ScenarioShock[];
+    distributions?: Record<string, { dist: string; mean: number; std?: number }>;
+  };
+};
+
+export type ScenarioData = {
+  id: string;
+  name: string;
+  status: string;
+  horizon_periods: number;
+  trials: number;
+  assumptions: ScenarioCreateParams["assumptions"];
+  simulation_id?: string | null;
+};
+
+export type SimulationMetricSummary = {
+  mean: number;
+  p5: number;
+  p50: number;
+  p95: number;
+  prob_below_3?: number;
+};
+
+export type SimulationResultMetric = {
+  metric: string;
+  summary: SimulationMetricSummary;
+  histogram?: number[];
+};
+
+export type SimulationRecommendation = {
+  title: string;
+  priority: number;
+  expected_impact?: {
+    metric: string;
+    direction: string;
+    magnitude: string;
+  };
+};
+
+export type SimulationData = {
+  id: string;
+  scenario_id: string;
+  status: string;
+  trials: number;
+  results: SimulationResultMetric[];
+  risk_deltas: Record<string, number>;
+  recommendations: SimulationRecommendation[];
+  explain_ref?: string;
+};
+
+export type SimulationRunResponse = {
+  simulation_id: string;
+  status: string;
+  ws_channel?: string;
+};
+
+export async function listScenarios(): Promise<ScenarioData[]> {
+  const res = await request<{ data: { scenarios: ScenarioData[] } }>("/scenarios");
+  return res.data.scenarios;
+}
+
+export async function createScenario(params: ScenarioCreateParams): Promise<{ id: string; status: string }> {
+  const res = await request<{ data: { id: string; status: string } }>("/scenarios", {
+    method: "POST",
+    body: JSON.stringify({
+      name: params.name,
+      horizon_periods: params.horizon_periods ?? 12,
+      trials: params.trials ?? 10000,
+      assumptions: params.assumptions,
+    }),
+  });
+  return res.data;
+}
+
+export async function getScenario(scenarioId: string): Promise<ScenarioData> {
+  const res = await request<{ data: ScenarioData }>(`/scenarios/${encodeURIComponent(scenarioId)}`);
+  return res.data;
+}
+
+export async function runScenario(scenarioId: string): Promise<SimulationRunResponse> {
+  const res = await request<{ data: SimulationRunResponse }>(
+    `/scenarios/${encodeURIComponent(scenarioId)}/run`,
+    { method: "POST" },
+  );
+  return res.data;
+}
+
+export async function getSimulation(simulationId: string): Promise<SimulationData> {
+  const res = await request<{ data: SimulationData }>(
+    `/simulations/${encodeURIComponent(simulationId)}`,
+  );
+  return res.data;
+}
+
+export function formatMetricLabel(key: string): string {
+  return key
+    .split("_")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+// --- AI Agent (Phase 6) ---
+
+export type AgentCitation = {
+  type: "metric" | "simulation" | "forecast" | "risk" | string;
+  ref: string;
+  label?: string;
+};
+
+export type AgentToolUsed = {
+  tool: string;
+  args: Record<string, unknown>;
+  result_ref?: string;
+};
+
+export type AgentMessageResponse = {
+  session_id: string;
+  interaction_id: string;
+  answer: string;
+  tools_used: AgentToolUsed[];
+  citations: AgentCitation[];
+  provider: string;
+  model: string;
+  tokens?: { input: number; output: number };
+};
+
+export type AgentSession = {
+  id: string;
+  title?: string;
+  created_at: string;
+  message_count?: number;
+};
+
+export type AgentSessionMessage = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  citations?: AgentCitation[];
+  tools_used?: AgentToolUsed[];
+  created_at?: string;
+};
+
+export async function sendAgentMessage(
+  message: string,
+  sessionId?: string | null,
+): Promise<AgentMessageResponse> {
+  const res = await request<{ data: AgentMessageResponse }>("/agent/messages", {
+    method: "POST",
+    body: JSON.stringify({ session_id: sessionId ?? null, message }),
+  });
+  return res.data;
+}
+
+export async function listAgentSessions(): Promise<AgentSession[]> {
+  const res = await request<{ data: { sessions: AgentSession[] } }>("/agent/sessions");
+  return res.data.sessions;
+}
+
+export async function getAgentSession(sessionId: string): Promise<{
+  session: AgentSession;
+  messages: AgentSessionMessage[];
+}> {
+  const res = await request<{
+    data: { session: AgentSession; messages: AgentSessionMessage[] };
+  }>(`/agent/sessions/${encodeURIComponent(sessionId)}`);
+  return res.data;
+}
+
+// --- Explainability (Phase 6) ---
+
+export type ExplainEvidence = { type: string; ref: string };
+
+export type ExplainFeature = { feature: string; importance: number };
+
+export type ExplainInput = { name: string; value: string | number; source?: string };
+
+export type ExplainData = {
+  ref: string;
+  kind: "metric" | "forecast" | "risk" | "simulation";
+  title: string;
+  formula?: string;
+  method?: string;
+  narrative?: string;
+  inputs?: ExplainInput[];
+  feature_importance?: ExplainFeature[];
+  drivers?: RiskDriver[];
+  backtest?: { windows: number; mape: number; coverage_80pct?: number };
+  evidence?: ExplainEvidence[];
+};
+
+function parseExplainRef(ref: string): { kind: ExplainData["kind"]; id: string } | null {
+  const cleaned = ref.replace(/^\/api\/v1/, "").replace(/^\//, "");
+  const metricMatch = cleaned.match(/^explain\/metric\/([^?]+)/);
+  if (metricMatch?.[1]) return { kind: "metric", id: metricMatch[1] };
+  const forecastMatch = cleaned.match(/^explain\/forecast\/([^/?]+)/);
+  if (forecastMatch?.[1]) return { kind: "forecast", id: forecastMatch[1] };
+  const riskMatch = cleaned.match(/^explain\/risk\/([^/?]+)/);
+  if (riskMatch?.[1]) return { kind: "risk", id: riskMatch[1] };
+  const simMatch = cleaned.match(/^explain\/simulation\/([^/?]+)/);
+  if (simMatch?.[1]) return { kind: "simulation", id: simMatch[1] };
+  return null;
+}
+
+export async function getExplain(ref: string): Promise<ExplainData> {
+  const parsed = parseExplainRef(ref);
+  if (!parsed) throw new Error(`Unsupported explain ref: ${ref}`);
+
+  const path = `/explain/${parsed.kind}/${encodeURIComponent(parsed.id)}`;
+  const res = await request<{ data: Record<string, unknown> }>(path);
+  const raw = res.data;
+
+  const title =
+    (raw.title as string) ??
+    (raw.metric as string) ??
+    (raw.forecast_id as string) ??
+    (raw.signal_id as string) ??
+    parsed.id;
+
+  return {
+    ref,
+    kind: parsed.kind,
+    title: typeof title === "string" ? formatMetricLabel(title.replace(/^fc_/, "")) : parsed.id,
+    formula: raw.formula as string | undefined,
+    method: raw.method as string | undefined,
+    narrative: raw.narrative as string | undefined,
+    inputs: raw.inputs as ExplainInput[] | undefined,
+    feature_importance: raw.feature_importance as ExplainFeature[] | undefined,
+    drivers: raw.drivers as RiskDriver[] | undefined,
+    backtest: raw.backtest as ExplainData["backtest"],
+    evidence: raw.evidence as ExplainEvidence[] | undefined,
+  };
+}

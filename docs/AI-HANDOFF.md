@@ -11,9 +11,9 @@
 |------|-------|
 | **Repo** | `/Users/ekambindra/Projects/aurora` |
 | **GitHub** | https://github.com/Ekam-Bindra/aurora |
-| **`main` commit** | `0868194` — Phases 1–3 integrated (P4 merge pending) |
-| **Active branch** | `feat/phase-5-forecasting-risk` (PR #5) |
-| **Next work** | P5 frontend (fan chart + Risk page); merge PR #4 → main; P6 simulation |
+| **`main` commit** | `9bede57` — Phases 1–5 integrated |
+| **Active branch** | `feat/phase-6-mvp` (P6 simulation + AI agent) |
+| **Next work** | Merge PR #6; E2E demo against live API; P7 ingestion |
 | **Demo login** | `cfo@nimbus.test` / `aurora-demo-2026` |
 | **Local API** | `./scripts/local-run.sh` or uvicorn on port 8000 |
 
@@ -24,15 +24,14 @@
 - ✅ P2: 25 tables, Alembic, Nimbus seeder + verification, SQLite/Postgres
 - ✅ P3: `packages/ml`, metrics/financials APIs, Overview + Financials live KPIs
 - ✅ PR #1, #2, #3 merged to `main`
-- ✅ **P4 complete on branch:** React Flow explorer (impact/neighborhood), Vanguard golden tests, `/graph/*` APIs, impact panel
-- ✅ **P5 backend complete:** `ForecastEngine` (seasonal + ensemble, rolling backtest, 80% CIs, optional Prophet), full `RiskGenomeEngine` (8 dims, drivers, signal IDs), `/forecasts/*`, `/explain/forecast/{id}`, `/risk/*`, `/explain/risk/{signal_id}`; golden tests (liquidity + concentration `high` at scale ≥ 0.5); API 36 pytest / ML 10 pytest / ruff clean
-- ✅ **P5 frontend:** Forecasting page (fan chart, horizon/metric selectors), Risk Genome page (radar, gauges, drill-down), Overview widgets, nav enabled
+- ✅ **P4 complete:** React Flow explorer (impact/neighborhood), Vanguard golden tests, `/graph/*` APIs
+- ✅ **P5 complete:** ForecastEngine, RiskGenomeEngine, `/forecasts/*`, `/risk/*`, `/explain/*`; web fan chart + Risk page
+- ✅ **P6 frontend (this branch):** `/simulations`, `/agent`, Explain overlay, Overview recommendations
+- ✅ **P6 backend (this branch):** `packages/simulations` Monte Carlo engine; `/scenarios/*`, `/simulations/*`, `/explain/simulation/{id}`; mock AI provider + `/agent/*`; golden + integration tests; API 45 pytest / simulations 6 pytest
 
 ### What's not done
 
-- ⏳ Merge PR #4 to `main` (branch pushed, CI should pass — merge blocked by env approval)
-- ⏳ P5 polish: wire frontend explain overlays to new `/explain/*` endpoints; optional Prophet install for production ensemble
-- ⏳ P6 Simulation + AI Agent + MVP dashboard
+- ⏳ Merge PR #6 and run full E2E demo (login → dashboard → simulate → AI)
 - ⏳ P7–P9 post-MVP (connectors, board reports, production AWS)
 
 ---
@@ -106,7 +105,7 @@
 | `AI_PROVIDER=mock` through MVP | No external keys |
 | Graph is projection of Postgres | Rebuildable; Neo4j optional with in-memory fallback for local |
 | Python 3.9 compat | `Optional[]` not `\|` unions in API/database/ml |
-| P5 forecast store in-memory | Redis/job queue in later iteration |
+| P6 simulation store in-memory | Redis/job queue in later iteration; matches forecast pattern |
 
 ---
 
@@ -119,6 +118,9 @@
 | P5 ML | `packages/ml/aurora_ml/forecast.py`, `risk.py` |
 | P5 API | `apps/api/aurora/modules/forecasts/router.py`, `modules/risk/router.py`, `services/risk.py` |
 | P5 Web | `apps/web/app/(dashboard)/forecasting/page.tsx`, `risk/page.tsx`, `lib/api.ts` |
+| P6 Simulations | `packages/simulations/aurora_sim/engine.py` |
+| P6 API | `apps/api/aurora/modules/simulation/router.py`, `modules/agent/router.py`, `providers/mock.py`, `services/simulation.py`, `services/agent.py` |
+| P6 Web | `apps/web/app/(dashboard)/simulations/page.tsx`, `agent/page.tsx`, `components/agent/AgentChat.tsx` |
 | Graph UI | `apps/web/components/graph/GraphExplorer.tsx` |
 | RBAC | `apps/api/aurora/core/rbac.py` |
 
@@ -144,3 +146,5 @@ Demo: cfo@nimbus.test / aurora-demo-2026. Enterprise quality.
 | 2026-06-29 | P5 backend complete: forecast ensemble + backtest, 8-dim risk genome, explain endpoints |
 | 2026-06-29 | P4 React Flow + golden tests complete; P5 foundation started |
 | 2026-06-29 | P5 forecast + risk UI shipped on web (`/forecasting`, `/risk`) |
+| 2026-06-29 | P6 backend: Monte Carlo engine, scenarios/simulations/agent APIs, mock AI provider |
+| 2026-06-29 | P6 frontend: simulations, AI agent, Explain overlay, dashboard polish |
