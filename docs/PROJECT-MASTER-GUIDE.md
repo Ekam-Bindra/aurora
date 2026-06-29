@@ -60,10 +60,11 @@ impact analysis, Monte Carlo simulations, and an explainable executive AI agent.
 | **P6** | Simulation + AI Agent + full dashboard → **MVP** | ✅ Done (`27bc579`) |
 | **P7** | Ingestion + live connectors | ✅ Done (`27bc579`) |
 | **P8** | Board reports + Admin console | ✅ Done (`27bc579`) |
-| **P9** | AWS production, ClickHouse, SSO, security hardening | 🔄 On `feat/phase-9-aws-hardening` |
+| **P9** | AWS production, ClickHouse, SSO, security hardening | ✅ Done (`bf8fb31`, PR #9) |
+| **Post-MVP** | CI regression, E2E Playwright, deploy readiness | ✅ Done (PRs #15–#17) |
 
 **MVP** = end of Phase 6 (runnable demo without external AI keys).
-**Production-ready for real users** = end of Phase 9 (+ your org's SSO, onboarding, ops).
+**Production-ready for real users** = end of Phase 9 + first AWS deploy (checklist ready).
 
 ---
 
@@ -285,4 +286,5 @@ See **time estimates** in `AI-HANDOFF.md` § Estimates.
 
 | Date | Change |
 |------|--------|
+| 2026-06-29 | Session end: P1–P9 + post-MVP complete; 116 pytest + 4 E2E; deploy checklist ready |
 | 2026-06-29 | P8 merged; P9 AWS Terraform, OIDC, security hardening, ClickHouse path |
