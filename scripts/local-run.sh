@@ -8,7 +8,8 @@ VENV="$API_DIR/.venv"
 DB_PATH="$ROOT/data/aurora_local.db"
 DEBUG_LOG="$ROOT/.cursor/debug-dbff07.log"
 API_PORT="${API_PORT:-8000}"
-API_BASE="http://localhost:${API_PORT}/api/v1"
+API_ROOT="http://127.0.0.1:${API_PORT}"
+API_BASE="${API_ROOT}/api/v1"
 
 # #region agent log
 _agent_log() {
@@ -29,6 +30,28 @@ with open('$DEBUG_LOG', 'a') as f:
 }
 # #endregion
 
+_api_health_ok() {
+  curl -sf "${API_BASE}/health" >/dev/null 2>&1
+}
+
+_api_root_redirects() {
+  local code
+  code="$(curl -s -o /dev/null -w "%{http_code}" "${API_ROOT}/")"
+  [[ "$code" == "307" || "$code" == "302" ]]
+}
+
+_stop_api_on_port() {
+  if command -v lsof >/dev/null 2>&1; then
+    local pids
+    pids="$(lsof -t -iTCP:"$API_PORT" -sTCP:LISTEN 2>/dev/null || true)"
+    if [ -n "$pids" ]; then
+      echo "==> Stopping process(es) on port $API_PORT: $pids"
+      kill $pids 2>/dev/null || true
+      sleep 1
+    fi
+  fi
+}
+
 mkdir -p "$ROOT/data"
 mkdir -p "$ROOT/.cursor"
 
@@ -38,30 +61,32 @@ export NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL:-${API_BASE}}"
 echo "==> AURORA local run"
 echo "    Database: $DATABASE_URL"
 echo "    API:      $API_BASE"
-echo "    Docs:     ${API_BASE}/docs"
-echo "    Web UI:   http://localhost:3000 (run: cd apps/web && pnpm dev)"
-echo ""
-echo "    NOTE: http://localhost (port 80) only works with Docker/nginx."
-echo "          Use port ${API_PORT} for the API and port 3000 for the web app."
+echo "    Docs:     ${API_BASE}/docs  (or http://localhost:${API_PORT} → redirects)"
+echo "    Web UI:   http://localhost:3000  →  ./scripts/dev-web.sh"
 echo ""
 
 # #region agent log
 _agent_log "H3" "local-run_start" "{\"api_port\":$API_PORT,\"cwd\":\"$(pwd)\"}"
 # #endregion
 
-if curl -sf "${API_BASE}/health" >/dev/null 2>&1; then
-  echo "==> API already running at ${API_BASE}"
-  echo "    Open docs: ${API_BASE}/docs"
+if _api_health_ok && _api_root_redirects; then
+  echo "==> API already running (healthy + up to date) at ${API_BASE}"
   echo "    Demo login: cfo@nimbus.test / aurora-demo-2026"
   # #region agent log
-  _agent_log "H3" "api_already_healthy" "{\"url\":\"${API_BASE}/health\"}"
+  _agent_log "H3" "api_already_ok" "{\"root_redirect\":true}"
   # #endregion
   exit 0
 fi
 
-if command -v lsof >/dev/null 2>&1 && lsof -nP -iTCP:"$API_PORT" -sTCP:LISTEN >/dev/null 2>&1; then
-  echo "ERROR: Port $API_PORT is in use but the API health check failed."
-  echo "       Kill the stale process or set API_PORT=8001 and retry."
+if _api_health_ok && ! _api_root_redirects; then
+  echo "==> Stale API detected (health OK but missing root → docs redirect). Restarting..."
+  # #region agent log
+  _agent_log "H4" "stale_api_restart" "{\"root_redirect\":false}"
+  # #endregion
+  _stop_api_on_port
+elif command -v lsof >/dev/null 2>&1 && lsof -nP -iTCP:"$API_PORT" -sTCP:LISTEN >/dev/null 2>&1; then
+  echo "ERROR: Port $API_PORT is in use but health check failed."
+  echo "       Run: lsof -i :$API_PORT  then kill the PID, or set API_PORT=8001"
   # #region agent log
   _agent_log "H4" "port_in_use_not_healthy" "{\"port\":$API_PORT}"
   # #endregion

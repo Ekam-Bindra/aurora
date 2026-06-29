@@ -7,11 +7,34 @@ When no URL is configured the API falls back to the in-memory store (Phase 1 / t
 from __future__ import annotations
 
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Generator, Optional
 
 from aurora_db.base import Base
 from aurora_db.session import make_engine, make_session_factory
 from sqlalchemy.orm import Session, sessionmaker
+
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+
+
+def _normalize_database_url(url: str) -> str:
+    """Resolve relative SQLite paths from the monorepo root and ensure parent dirs exist."""
+    if not url.startswith("sqlite"):
+        return url
+    if ":memory:" in url:
+        return url
+    prefix = "sqlite:///"
+    if not url.startswith(prefix):
+        return url
+    raw = url[len(prefix):]
+    if raw.startswith("./"):
+        path = (_REPO_ROOT / raw[2:]).resolve()
+    elif raw.startswith("/"):
+        path = Path(raw)
+    else:
+        path = Path(raw).resolve()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return f"sqlite:///{path}"
 
 _engine = None
 _session_factory: Optional[sessionmaker] = None
@@ -21,6 +44,7 @@ _database_url: Optional[str] = None
 def init_database(url: str, *, create_tables: bool = False) -> None:
     """Initialize the global engine + session factory. Safe to call once at startup."""
     global _engine, _session_factory, _database_url
+    url = _normalize_database_url(url)
     _engine = make_engine(url)
     if create_tables and url.startswith("sqlite"):
         Base.metadata.create_all(_engine)

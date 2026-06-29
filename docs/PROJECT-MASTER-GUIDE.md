@@ -101,18 +101,21 @@ pnpm install
 
 First startup seeds Nimbus at `demo_seed_scale` (default 0.1 in `.env` via settings).
 
-### Option B — Web + API
+### Option B — Web + API (recommended)
 
 ```bash
-# Terminal 1 — API (as above, or with DATABASE_URL set)
-export DATABASE_URL=sqlite:///./data/aurora_local.db
-export NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
-cd apps/api && uvicorn aurora.main:app --reload --port 8000
+# Terminal 1 — API
+cd ~/Projects/aurora
+./scripts/local-run.sh
 
-# Terminal 2 — Web
-cd apps/web && pnpm dev
-# http://localhost:3000
+# Terminal 2 — Web (proxies /api/v1 → port 8000)
+cd ~/Projects/aurora
+./scripts/dev-web.sh
 ```
+
+Open **http://localhost:3000** (not `http://localhost` alone).
+
+The web app calls same-origin `/api/v1`, which Next.js proxies to the API on port 8000.
 
 ### Option C — Full Docker stack
 
