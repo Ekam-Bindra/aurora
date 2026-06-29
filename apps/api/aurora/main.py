@@ -11,6 +11,7 @@ from typing import Optional
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 
 from .api.v1 import api_router
 from .core.config import Settings, get_settings
@@ -102,6 +103,11 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
 
     register_exception_handlers(app)
     app.include_router(api_router, prefix=settings.api_v1_prefix)
+
+    @app.get("/", include_in_schema=False)
+    async def root() -> RedirectResponse:
+        """Browser-friendly entry: Swagger UI (not raw JSON)."""
+        return RedirectResponse(url=f"{settings.api_v1_prefix}/docs")
 
     return app
 

@@ -4,9 +4,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy.orm import Session
-
 from aurora_graph.sync import sync_company_graph
+from sqlalchemy.orm import Session
 
 from ..graph_store import get_graph_store
 
