@@ -70,6 +70,11 @@ class Conflict(AppError):
     code = "conflict"
 
 
+class Unprocessable(AppError):
+    status_code = 422
+    code = "unprocessable"
+
+
 def _envelope(code: str, message: str, details: Any = None) -> dict:
     return {
         "error": {

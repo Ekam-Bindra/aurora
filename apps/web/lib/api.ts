@@ -66,3 +66,124 @@ export async function login(email: string, password: string): Promise<AuthUser> 
 export async function getMe(): Promise<AuthUser> {
   return request<AuthUser>("/auth/me");
 }
+
+export type MetricKpiMoney = {
+  value_cents: number;
+  currency: string;
+  delta_pct_yoy?: number | null;
+};
+
+export type MetricKpiRatio = {
+  value: number | null;
+  delta_pct_yoy?: number | null;
+};
+
+export type MetricsOverviewData = {
+  as_of: string | null;
+  kpis: {
+    revenue_mtd?: MetricKpiMoney;
+    gross_margin?: MetricKpiRatio;
+    operating_margin?: MetricKpiRatio;
+    net_burn?: { value_cents: number; currency: string };
+    cash_runway_months?: { value: number; trend?: string };
+  };
+};
+
+export type MetricSeriesPoint = {
+  period: string;
+  value?: number;
+  value_cents?: number;
+};
+
+export type PnlSummary = {
+  from: string;
+  to: string;
+  revenue_cents: number;
+  cogs_cents: number;
+  gross_profit_cents: number;
+  expenses_cents: number;
+  net_profit_cents: number;
+  currency: string;
+};
+
+export type CashSummary = {
+  cash_cents: number;
+  net_burn_cents: number;
+  runway_months: number | null;
+  currency: string;
+  as_of: string;
+};
+
+export type ConcentrationEntry = {
+  name: string;
+  amount_cents: number;
+  share: number;
+};
+
+export type ConcentrationData = {
+  customers: {
+    top_5_share: number;
+    hhi_normalized: number;
+    top: ConcentrationEntry[];
+  };
+  vendors: {
+    top_5_share: number;
+    hhi_normalized: number;
+    top: ConcentrationEntry[];
+  };
+};
+
+export async function getMetricsOverview(): Promise<MetricsOverviewData> {
+  const res = await request<{ data: MetricsOverviewData }>("/metrics/overview");
+  return res.data;
+}
+
+export async function getMetricSeries(metric: string): Promise<MetricSeriesPoint[]> {
+  const res = await request<{ data: { points: MetricSeriesPoint[] } }>(
+    `/metrics/${metric}/series`,
+  );
+  return res.data.points;
+}
+
+export async function getPnlSummary(from: string, to: string): Promise<PnlSummary> {
+  const res = await request<{ data: PnlSummary }>(
+    `/financials/pnl?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+  );
+  return res.data;
+}
+
+export async function getCashSummary(): Promise<CashSummary> {
+  const res = await request<{ data: CashSummary }>("/financials/cash");
+  return res.data;
+}
+
+export async function getConcentration(): Promise<ConcentrationData> {
+  const res = await request<{ data: ConcentrationData }>("/metrics/concentration");
+  return res.data;
+}
+
+export function formatCents(cents: number, compact = true): string {
+  const dollars = cents / 100;
+  if (compact && Math.abs(dollars) >= 1_000_000) {
+    return `$${(dollars / 1_000_000).toFixed(1)}M`;
+  }
+  if (compact && Math.abs(dollars) >= 1_000) {
+    return `$${(dollars / 1_000).toFixed(1)}K`;
+  }
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(dollars);
+}
+
+export function formatPct(value: number | null | undefined, digits = 1): string {
+  if (value === null || value === undefined) return "—";
+  return `${(value * 100).toFixed(digits)}%`;
+}
+
+export function formatYoY(delta: number | null | undefined): string | undefined {
+  if (delta === null || delta === undefined) return undefined;
+  const sign = delta > 0 ? "+" : "";
+  return `${sign}${delta.toFixed(1)}% YoY`;
+}

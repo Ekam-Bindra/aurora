@@ -9,7 +9,7 @@ type NavItem = { href: string; label: string; permission: string | null; ready: 
 
 const NAV: NavItem[] = [
   { href: "/overview", label: "Overview", permission: null, ready: true },
-  { href: "/financials", label: "Financials", permission: "read:financials", ready: false },
+  { href: "/financials", label: "Financials", permission: "read:financials", ready: true },
   { href: "/forecasting", label: "Forecasting", permission: "read:financials", ready: false },
   { href: "/risk", label: "Risk Genome", permission: "read:operations", ready: false },
   { href: "/graph", label: "Knowledge Graph", permission: "read:graph", ready: false },

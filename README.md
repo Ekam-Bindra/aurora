@@ -68,9 +68,8 @@ top questions, and the permissions they get are detailed in
 ## Documentation index
 
 This repository began as a **design and architecture foundation** and is now being built against
-those docs. `main` holds the design docs as the source of truth; the foundation API (Phase 1) and
-the PostgreSQL persistence layer (Phase 2) land on stacked feature branches. Every document below
-is written to enough depth that the implementation follows it without re-researching decisions.
+those docs. `main` holds Phases 1–2 (foundation + persistence); Phase 3 (financial intelligence)
+is on `feat/phase-3-financial-intelligence`.
 
 ### Start here
 - [`docs/00-overview-and-vision.md`](docs/00-overview-and-vision.md) — product vision, personas, modules, value proposition, glossary.
@@ -149,6 +148,7 @@ open http://localhost:3000        # login: demo@nimbus.test / see seed output
 | API contract | **Complete** (`main`) |
 | Backend API — Phase 1 | **Implemented** — FastAPI auth/RBAC, multi-tenancy, seeded demo, tests (`apps/api`) |
 | Persistence — Phase 2 | **Implemented** — SQLAlchemy models, Alembic, tenant repositories, Nimbus seeder (`packages/database`) |
+| Financial intelligence — Phase 3 | **In progress** — DuckDB marts, calculators (`packages/ml`), `/metrics/*` + `/financials/*` APIs, live dashboard KPIs |
 | Web shell — Phase 1 | **Scaffolded** — Next.js dashboard shell (`apps/web`) |
 | Infrastructure code | Docker Compose + GitHub Actions CI in place; cloud IaC next |
 
