@@ -73,6 +73,7 @@
 | Area | Files |
 |------|-------|
 | Deploy | `docs/DEPLOYMENT.md`, `infra/terraform/`, `.github/workflows/deploy.yml` |
+| **Local CI** | `docs/CI.md` — mirror `.github/workflows/ci.yml` locally |
 | Analytics | `packages/analytics/aurora_analytics/` |
 | SSO | `apps/api/aurora/modules/auth/oidc_router.py`, `core/oidc.py` |
 | Security | `apps/api/aurora/core/security_middleware.py`, `core/config.py` |

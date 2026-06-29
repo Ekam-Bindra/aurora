@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from typing import List
 
-from aurora_ml.marts import MonthlyFinancialRow, get_mart_rows as _duckdb_mart_rows
+from aurora_ml.marts import MonthlyFinancialRow
+from aurora_ml.marts import get_mart_rows as _duckdb_mart_rows
 from sqlalchemy.orm import Session
 
 
