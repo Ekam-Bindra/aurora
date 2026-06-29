@@ -33,6 +33,20 @@ export function clearToken(): void {
   window.localStorage.removeItem(TOKEN_KEY);
 }
 
+export class ApiError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
+export function isForbiddenError(err: unknown): boolean {
+  return err instanceof ApiError && err.status === 403;
+}
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = getToken();
   const res = await fetch(`${API_URL}${path}`, {
@@ -51,7 +65,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     } catch {
       /* non-JSON error */
     }
-    throw new Error(message);
+    throw new ApiError(message, res.status);
   }
   return (await res.json()) as T;
 }
@@ -674,7 +688,7 @@ async function requestRaw(path: string, init: RequestInit = {}): Promise<Respons
     } catch {
       /* non-JSON error */
     }
-    throw new Error(message);
+    throw new ApiError(message, res.status);
   }
   return res;
 }
@@ -767,6 +781,291 @@ export function ingestionJobStatusTone(
 
 export function formatDataSourceKind(kind: string): string {
   return kind.charAt(0).toUpperCase() + kind.slice(1);
+}
+
+// --- Board Reports (Phase 8) ---
+
+export type BoardReportSection =
+  | "financial_summary"
+  | "forecast"
+  | "risk_genome"
+  | "scenarios"
+  | "key_decisions";
+
+export type BoardReportStatus =
+  | "draft"
+  | "in_review"
+  | "generating"
+  | "ready"
+  | "approved"
+  | "published"
+  | "failed";
+
+export type BoardReportTemplate = "standard" | "executive_summary" | "risk_focus";
+
+export type BoardReportSummary = {
+  id: string;
+  title: string;
+  period_start: string;
+  period_end: string;
+  sections: BoardReportSection[] | string[];
+  status: BoardReportStatus | string;
+  template?: BoardReportTemplate | string | null;
+  created_at?: string | null;
+  generated_at?: string | null;
+  export_url?: string | null;
+};
+
+export type BoardReportDetail = BoardReportSummary & {
+  approved_at?: string | null;
+  approved_by?: string | null;
+  created_by?: string | null;
+  narrative?: Record<string, string>;
+  metadata?: Record<string, unknown>;
+  ws_channel?: string | null;
+};
+
+export type BoardReportCreateParams = {
+  title: string;
+  period_start: string;
+  period_end: string;
+  sections: BoardReportSection[];
+  template?: BoardReportTemplate;
+};
+
+export type BoardReportExport = {
+  export_url: string;
+  expires_at?: string | null;
+  format?: string;
+};
+
+export type PaginatedMeta = {
+  page: number;
+  page_size: number;
+  total_items: number;
+  total_pages: number;
+  next_cursor?: string | null;
+};
+
+export type PaginatedResult<T> = {
+  data: T[];
+  pagination: PaginatedMeta;
+};
+
+export async function listBoardReports(): Promise<BoardReportSummary[]> {
+  const res = await request<{ data: BoardReportSummary[] }>("/board-reports");
+  return res.data;
+}
+
+export async function createBoardReport(
+  params: BoardReportCreateParams,
+): Promise<{ id: string; status: string }> {
+  const res = await request<{ data: { id: string; status: string } }>("/board-reports", {
+    method: "POST",
+    body: JSON.stringify({
+      title: params.title,
+      period_start: params.period_start,
+      period_end: params.period_end,
+      sections: params.sections,
+      template: params.template ?? "standard",
+    }),
+  });
+  return res.data;
+}
+
+export async function getBoardReport(reportId: string): Promise<BoardReportDetail> {
+  const res = await request<{ data: BoardReportDetail }>(
+    `/board-reports/${encodeURIComponent(reportId)}`,
+  );
+  return res.data;
+}
+
+export async function generateBoardReport(
+  reportId: string,
+): Promise<{ id: string; status: string; ws_channel?: string }> {
+  const res = await request<{ data: { id: string; status: string; ws_channel?: string } }>(
+    `/board-reports/${encodeURIComponent(reportId)}/generate`,
+    { method: "POST" },
+  );
+  return res.data;
+}
+
+export async function approveBoardReport(reportId: string): Promise<{ id: string; status: string }> {
+  const res = await request<{ data: { id: string; status: string } }>(
+    `/board-reports/${encodeURIComponent(reportId)}/approve`,
+    { method: "POST" },
+  );
+  return res.data;
+}
+
+export async function getBoardReportExport(reportId: string): Promise<BoardReportExport> {
+  const res = await request<{ data: BoardReportExport }>(
+    `/board-reports/${encodeURIComponent(reportId)}/export`,
+  );
+  return res.data;
+}
+
+export const BOARD_REPORT_SECTIONS: {
+  id: BoardReportSection;
+  label: string;
+  description: string;
+}[] = [
+  {
+    id: "financial_summary",
+    label: "KPIs & financial summary",
+    description: "Revenue, margins, cash, and runway highlights",
+  },
+  {
+    id: "forecast",
+    label: "Forecast",
+    description: "Forward-looking revenue and cash projections with confidence bands",
+  },
+  {
+    id: "risk_genome",
+    label: "Risk genome",
+    description: "Eight-dimension risk scores and top drivers",
+  },
+  {
+    id: "scenarios",
+    label: "Scenarios",
+    description: "Monte Carlo outcomes and recommended actions",
+  },
+  {
+    id: "key_decisions",
+    label: "Key decisions",
+    description: "Open decisions and AI-assisted recommendations",
+  },
+];
+
+export const BOARD_REPORT_TEMPLATES: {
+  id: BoardReportTemplate;
+  label: string;
+  sections: BoardReportSection[];
+}[] = [
+  {
+    id: "standard",
+    label: "Standard board pack",
+    sections: ["financial_summary", "forecast", "risk_genome", "key_decisions"],
+  },
+  {
+    id: "executive_summary",
+    label: "Executive summary",
+    sections: ["financial_summary", "forecast", "key_decisions"],
+  },
+  {
+    id: "risk_focus",
+    label: "Risk focus",
+    sections: ["financial_summary", "risk_genome", "scenarios", "key_decisions"],
+  },
+];
+
+export function boardReportStatusTone(
+  status: string,
+): "positive" | "warning" | "negative" | "muted" {
+  switch (status) {
+    case "approved":
+    case "published":
+    case "ready":
+      return "positive";
+    case "generating":
+    case "in_review":
+    case "draft":
+      return "warning";
+    case "failed":
+      return "negative";
+    default:
+      return "muted";
+  }
+}
+
+export function formatBoardReportSection(section: string): string {
+  const found = BOARD_REPORT_SECTIONS.find((s) => s.id === section);
+  return found?.label ?? formatMetricLabel(section);
+}
+
+// --- Admin console (Phase 8) ---
+
+export type WorkspaceUser = {
+  id: string;
+  email: string;
+  full_name: string;
+  title: string;
+  roles: string[];
+  is_active: boolean;
+};
+
+export type RoleDefinition = {
+  name: string;
+  permissions: string[];
+  description?: string;
+};
+
+export type AuditLogEntry = {
+  id: string;
+  action: string;
+  resource_type: string;
+  resource_id?: string | null;
+  user_id?: string | null;
+  user_email?: string | null;
+  created_at: string;
+  ip_address?: string | null;
+  details?: Record<string, unknown>;
+};
+
+export type AuditLogQuery = {
+  page?: number;
+  page_size?: number;
+  action?: string;
+  resource_type?: string;
+  q?: string;
+  cursor?: string;
+};
+
+export async function listWorkspaceUsers(
+  page = 1,
+  pageSize = 50,
+): Promise<PaginatedResult<WorkspaceUser>> {
+  return request<PaginatedResult<WorkspaceUser>>(
+    `/workspaces/users?page=${page}&page_size=${pageSize}`,
+  );
+}
+
+export async function listRoles(): Promise<RoleDefinition[]> {
+  const res = await request<{ data: RoleDefinition[] }>("/roles");
+  return res.data;
+}
+
+export async function assignUserRole(
+  userId: string,
+  roleName: string,
+): Promise<{ user_id: string; roles: string[] }> {
+  const res = await request<{ data: { user_id: string; roles: string[] } }>(
+    `/users/${encodeURIComponent(userId)}/roles`,
+    {
+      method: "POST",
+      body: JSON.stringify({ role: roleName }),
+    },
+  );
+  return res.data;
+}
+
+export async function removeUserRole(userId: string, roleName: string): Promise<void> {
+  await request<{ data: { ok: boolean } }>(
+    `/users/${encodeURIComponent(userId)}/roles/${encodeURIComponent(roleName)}`,
+    { method: "DELETE" },
+  );
+}
+
+export async function listAuditLogs(params: AuditLogQuery = {}): Promise<PaginatedResult<AuditLogEntry>> {
+  const qs = new URLSearchParams();
+  if (params.page) qs.set("page", String(params.page));
+  if (params.page_size) qs.set("page_size", String(params.page_size));
+  if (params.action) qs.set("action", params.action);
+  if (params.resource_type) qs.set("resource_type", params.resource_type);
+  if (params.q) qs.set("q", params.q);
+  if (params.cursor) qs.set("cursor", params.cursor);
+  const query = qs.toString();
+  return request<PaginatedResult<AuditLogEntry>>(`/audit-logs${query ? `?${query}` : ""}`);
 }
 
 export async function getExplain(ref: string): Promise<ExplainData> {
