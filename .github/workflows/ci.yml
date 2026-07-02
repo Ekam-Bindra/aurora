@@ -157,9 +157,9 @@ jobs:
       NEXT_PUBLIC_API_URL: http://localhost/api/v1
     steps:
       - uses: actions/checkout@v4
+      # pnpm version comes from package.json's packageManager field; specifying
+      # it here too makes newer releases of the setup action hard-error.
       - uses: pnpm/action-setup@v4
-        with:
-          version: 9
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -182,16 +182,14 @@ jobs:
         with:
           python-version: "3.11"
       - uses: pnpm/action-setup@v4
-        with:
-          version: 9
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: pnpm
       - name: Install web deps
         run: pnpm install --frozen-lockfile
-      - name: Install Playwright chromium
-        run: pnpm --filter @aurora/web test:e2e:install
+      - name: Install Playwright chromium (with system deps)
+        run: pnpm --filter @aurora/web exec playwright install --with-deps chromium
       - name: Run E2E suite (boots API + web via playwright webServer)
         run: pnpm --filter @aurora/web test:e2e
         env:

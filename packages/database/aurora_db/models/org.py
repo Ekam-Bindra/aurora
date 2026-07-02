@@ -23,7 +23,10 @@ from ..types import GUID
 
 class Department(UUIDPrimaryKeyMixin, TenantScopedMixin, TimestampMixin, Base):
     __tablename__ = "department"
-    __table_args__ = (UniqueConstraint("company_id", "name", name="company_id_name"),)
+    # Table-scoped name — see Role: schema-global index namespace on PostgreSQL.
+    __table_args__ = (
+        UniqueConstraint("company_id", "name", name="department_company_name"),
+    )
 
     name: Mapped[str] = mapped_column(Text, nullable=False)
     code: Mapped[Optional[str]] = mapped_column(String(16))

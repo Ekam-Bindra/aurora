@@ -57,7 +57,9 @@ class Role(UUIDPrimaryKeyMixin, TenantScopedMixin, CreatedAtMixin, Base):
     """A named bundle of permissions, scoped to a tenant."""
 
     __tablename__ = "role"
-    __table_args__ = (UniqueConstraint("company_id", "name", name="company_id_name"),)
+    # Table-scoped name: PostgreSQL backs unique constraints with schema-global
+    # indexes, so this must not collide with department's equivalent constraint.
+    __table_args__ = (UniqueConstraint("company_id", "name", name="role_company_name"),)
 
     name: Mapped[str] = mapped_column(String(64), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text)
