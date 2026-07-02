@@ -69,7 +69,12 @@ class Settings(BaseSettings):
     security_headers_enabled: bool = True
 
     # AI provider abstraction (mock requires no keys).
-    ai_provider: str = "mock"  # mock | openai | bedrock
+    ai_provider: str = "mock"  # mock | anthropic | openai | bedrock
+    anthropic_api_key: str = ""
+    anthropic_model: str = "claude-sonnet-5"
+    openai_api_key: str = ""
+    openai_model: str = "gpt-4o-mini"
+    ai_timeout_seconds: float = 30.0
 
     # Demo seeding
     seed_demo_on_startup: bool = True
@@ -137,6 +142,18 @@ class Settings(BaseSettings):
         if self.analytics_backend == "clickhouse" and not self.clickhouse_url:
             raise RuntimeError(
                 "CLICKHOUSE_URL is required when ANALYTICS_BACKEND=clickhouse."
+            )
+        if self.ai_provider not in ("mock", "anthropic", "openai", "bedrock"):
+            raise RuntimeError(
+                "AI_PROVIDER must be one of: mock, anthropic, openai, bedrock."
+            )
+        if self.ai_provider == "anthropic" and not self.anthropic_api_key:
+            raise RuntimeError("ANTHROPIC_API_KEY is required when AI_PROVIDER=anthropic.")
+        if self.ai_provider == "openai" and not self.openai_api_key:
+            raise RuntimeError("OPENAI_API_KEY is required when AI_PROVIDER=openai.")
+        if self.ai_provider == "bedrock":
+            raise RuntimeError(
+                "AI_PROVIDER=bedrock is not implemented yet — use anthropic, openai, or mock."
             )
         if self.oidc_enabled:
             self.oidc_config()
