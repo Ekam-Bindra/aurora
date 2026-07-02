@@ -5,7 +5,19 @@
 
 ---
 
-## Quick state (session end — 2026-07-01)
+## Quick state (session end — 2026-07-02: **STAGING IS LIVE ON AWS**)
+
+| Item | Value |
+|------|-------|
+| **Staging URL** | http://aurora-staging-959198614.us-east-1.elb.amazonaws.com (login `cfo@nimbus.test` / `aurora-demo-2026`) |
+| **AWS** | account `216812304180` · us-east-1 · cluster `aurora-staging` · RDS `db.t4g.micro/20GB` (free-plan account limit) · deploy role `aurora-github-deploy` (OIDC) |
+| **`main`** | PRs #20–#22 merged; CI 8 jobs green (incl. new E2E job) |
+| **Deploys** | GitHub → Actions → Deploy → staging/latest (builds in CI; local Docker not required) |
+| **Migrations/seed** | One-off ECS tasks — `python -m aurora_db.migrate` / `python -m aurora_db.seed` (RDS is private; see DEPLOY-CHECKLIST §4) |
+| **First-boot fixes landed** | psycopg missing from image · `parents[3]` IndexError at /app · CORS_ORIGINS JSON parsing · role/department constraint collision on Postgres |
+| **Next** | AI provider key (Q-7) · domain + ACM cert for HTTPS · production env when ready · `terraform destroy` if staging should stop billing (~$2–5/day) |
+
+## Previous quick state (2026-07-01)
 
 | Item | Value |
 |------|-------|
@@ -261,6 +273,7 @@ Breakdown by package: api 78 · database 17 · ml 10 · graph 2 · simulations 6
 
 | Date | Update |
 |------|--------|
+| 2026-07-02 | **Session 4 — FIRST AWS DEPLOY (staging live):** PRs #20–#22 merged via API after 8/8 CI green (Database-on-Postgres job caught the latent role/department `company_id_name` unique-constraint collision — fixed); pnpm/action-setup double-spec and Playwright `--with-deps` CI fixes; Terraform applied (56 resources; RDS downsized to `db.t4g.micro/20GB` — free-plan account rejects t4g.medium); deploy workflow dispatched via OIDC role + repo secrets set programmatically; three first-boot container bugs found & fixed (missing psycopg extra in image, `parents[3]` IndexError at `/app`, CORS_ORIGINS strict-JSON parsing — each locally invisible); migrations + Nimbus seed run as one-off in-VPC ECS tasks via new `python -m aurora_db.migrate`; ALB smoke green (health/login/metrics/board-reports; login rate-limiter verified working under k6); web UI serving. DEPLOY-CHECKLIST §4 rewritten for private-RDS reality |
 | 2026-07-01 | **Session 3 (`ekam-testing`):** `docs/deploy-prep/USER-ACTIONS.md` step-by-step user guide + `scripts/setup-aws-oidc.sh` (OIDC provider + least-privilege deploy role); CI gains web lint/typecheck + Playwright E2E job; real Anthropic/OpenAI agent providers (httpx, 12 unit tests, 502 error envelope, boot-time key validation — mock stays default until user supplies a key); all 8 `set-state-in-effect` sites refactored and the rule enforced at error |
 | 2026-07-01 | **Session 2 (`ekam-testing`):** persisted board reports / ingestion jobs / simulation runs to DB (migration `0002`, 120 pytest green) resolving the `desired_count=2` risk; Alembic-at-startup for file-backed SQLite (stale dev DBs self-heal — found via real E2E failure); react 19.2 bump gated green; ESLint 9 flat-config migration (`next lint` removed in 16; eslint 10 rejected — plugin incompat); aws CLI v1 + k6 installed into `.tools` with script fallbacks; 12 `feat/*` + 5 dependabot branches deleted on origin (PRs #12–#14 + eslint-10 + react-19 closed as superseded); k6-local flagged machine-specific (API exonerated 300/300); Docker + AWS credentials + GitHub secrets remain user-only |
 | 2026-07-01 | **Session 1 — deploy-prep (`ekam-testing`):** fixed date-rollover seed bug (anomalies A/B now pinned vs neighbor months — suite was red since the July rollover; CI on `main` red until merged); bumped typescript 6.0.3 / next 16.2.x / tailwindcss 4.3.1 with build+E2E gates (Tailwind 4 PostCSS migration included); Dependabot PRs #12–#14 superseded (stale branches — do not merge); deploy preflight run (only FAILs = missing `aws`/`docker` CLIs); README + web README synced to merged reality; local merged `feat/*` branches deleted; session docs under `docs/deploy-prep/` incl. open questions Q-1…Q-7; 116 pytest + 4 E2E green |

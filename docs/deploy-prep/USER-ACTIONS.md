@@ -1,6 +1,16 @@
 # AURORA — Your Action List (step by step)
 
-> **Written:** 2026-07-01 · Everything the AI cannot do on your behalf, in the order to do it.
+> **STATUS 2026-07-02: Steps 1–5 are DONE — staging is live** at
+> http://aurora-staging-959198614.us-east-1.elb.amazonaws.com
+> (`cfo@nimbus.test` / `aurora-demo-2026`). The user supplied AWS credentials (Step 2);
+> the agent executed the merge, OIDC role, GitHub secrets, Terraform, images, migrations,
+> seed, and smoke tests using the machine's stored GitHub token. Step 3 (Docker) was
+> skipped — images build in GitHub Actions. **Only Step 6 (AI key) remains**, plus
+> optional: domain + ACM certificate for HTTPS, and `terraform destroy` to stop
+> staging billing (~$2–5/day) when not needed.
+
+> **Original guide (kept for the production run-through):**
+> Everything the AI cannot do on your behalf, in the order to do it.
 > Each step says how to verify it worked. Steps 1–2 unblock everything else.
 
 ---
