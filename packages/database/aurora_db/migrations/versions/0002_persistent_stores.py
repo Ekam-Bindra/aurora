@@ -36,7 +36,7 @@ def upgrade() -> None:
     inspector = sa.inspect(bind)
 
     if "content" not in _columns(inspector, "board_report"):
-        op.add_column("board_report", sa.Column("content", JSONB(), nullable=True))
+        op.add_column("board_report", sa.Column("content", JSONB, nullable=True))
 
     sim_cols = _columns(inspector, "simulation_result")
     if "run_id" not in sim_cols:
@@ -48,7 +48,7 @@ def upgrade() -> None:
         op.add_column("simulation_result", sa.Column("seed", sa.Integer(), nullable=True))
     if "driver_sensitivity" not in sim_cols:
         op.add_column(
-            "simulation_result", sa.Column("driver_sensitivity", JSONB(), nullable=True)
+            "simulation_result", sa.Column("driver_sensitivity", JSONB, nullable=True)
         )
 
     if "ingestion_job" not in inspector.get_table_names():
@@ -74,7 +74,7 @@ def upgrade() -> None:
             sa.Column("rows_inserted", sa.Integer(), nullable=False, server_default="0"),
             sa.Column("rows_updated", sa.Integer(), nullable=False, server_default="0"),
             sa.Column("rows_rejected", sa.Integer(), nullable=False, server_default="0"),
-            sa.Column("errors", JSONB(), nullable=False, server_default="[]"),
+            sa.Column("errors", JSONB, nullable=False, server_default="[]"),
             sa.Column("lineage_ref", sa.Text(), nullable=True),
             sa.Column("started_at", sa.DateTime(timezone=True), nullable=True),
             sa.Column("finished_at", sa.DateTime(timezone=True), nullable=True),

@@ -41,13 +41,37 @@ _session_factory: Optional[sessionmaker] = None
 _database_url: Optional[str] = None
 
 
+def _upgrade_sqlite_schema(url: str) -> None:
+    """Bring a file-backed SQLite dev database to the current Alembic head.
+
+    ``create_all`` only adds missing *tables*, so column-adding revisions
+    (e.g. 0002's ``board_report.content``) never reach long-lived local files
+    like ``data/aurora_e2e.db`` without running real migrations.
+    """
+    from argparse import Namespace
+
+    import aurora_db
+    from alembic import command
+    from alembic.config import Config
+
+    cfg = Config(cmd_opts=Namespace(x=[f"url={url}"]))
+    cfg.set_main_option(
+        "script_location",
+        str(Path(aurora_db.__file__).resolve().parent / "migrations"),
+    )
+    command.upgrade(cfg, "head")
+
+
 def init_database(url: str, *, create_tables: bool = False) -> None:
     """Initialize the global engine + session factory. Safe to call once at startup."""
     global _engine, _session_factory, _database_url
     url = _normalize_database_url(url)
     _engine = make_engine(url)
     if create_tables and url.startswith("sqlite"):
-        Base.metadata.create_all(_engine)
+        if ":memory:" in url:
+            Base.metadata.create_all(_engine)
+        else:
+            _upgrade_sqlite_schema(url)
     _session_factory = make_session_factory(_engine)
     _database_url = url
 
