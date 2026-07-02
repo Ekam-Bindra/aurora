@@ -28,22 +28,27 @@ Secrets Manager, SSM, S3, IAM.
 1. In the AWS Console: **IAM → Users → Create user** (e.g. `aurora-deployer`)
    → **Attach policies directly** → `AdministratorAccess` for the first deploy
    (you can tighten later) → create an **access key** (type: CLI).
-2. In a terminal:
+2. In a terminal (blocks are paste-safe — no inline comments, because plain macOS zsh
+   treats pasted `#` text as arguments, not comments):
 
    ```bash
    cd ~/Projects/aurora
-   export PATH="$PWD/.tools:$PATH"     # repo-local aws/terraform/k6
-   aws configure                        # paste key id + secret; region: us-east-1; output: json
+   export PATH="$PWD/.tools:$PATH"
+   aws configure
    ```
+
+   `export PATH...` makes the repo-local `aws`/`terraform`/`k6` binaries available in this
+   terminal (re-run it in every new terminal). At the `aws configure` prompts enter: your
+   access key id, your secret key, region `us-east-1`, output `json`.
 
 3. **Verify:**
 
    ```bash
-   aws sts get-caller-identity          # prints your account id
+   aws sts get-caller-identity
    ./scripts/deploy-check.sh --aws-hints
    ```
 
-   Everything except `docker` should be OK.
+   The first prints your account id; the preflight should show everything OK except `docker`.
 
 ---
 
@@ -66,7 +71,7 @@ OIDC provider + role for you:
 ```bash
 cd ~/Projects/aurora
 export PATH="$PWD/.tools:$PATH"
-./scripts/setup-aws-oidc.sh            # prints the role ARN when done
+./scripts/setup-aws-oidc.sh
 ```
 
 Then in GitHub: **repo → Settings → Secrets and variables → Actions → New repository secret**
@@ -85,35 +90,56 @@ with protection rules.
 
 ## Step 5 — First deploy  (~45–60 min, mostly waiting on AWS)
 
-Follow [`DEPLOY-CHECKLIST.md`](../DEPLOY-CHECKLIST.md) top to bottom. Condensed:
+Follow [`DEPLOY-CHECKLIST.md`](../DEPLOY-CHECKLIST.md) top to bottom. Condensed, one block
+per sub-step (run all of them in the same terminal so the PATH export sticks):
+
+**5a — Terraform.** Creates billable resources (RDS, ALB, NAT, Fargate).
 
 ```bash
-cd ~/Projects/aurora && export PATH="$PWD/.tools:$PATH"
-
-# 5a. Terraform
+cd ~/Projects/aurora
+export PATH="$PWD/.tools:$PATH"
 cd infra/terraform
-cp terraform.tfvars.example terraform.tfvars   # edit: environment=staging, region, cors_origins
-terraform init && terraform plan               # review what will be created ($$$: RDS+ALB+NAT)
-terraform apply                                # type yes
+cp terraform.tfvars.example terraform.tfvars
+```
 
-# 5b. Images — EITHER GitHub Actions (no Docker needed):
-#     GitHub → Actions → Deploy → Run workflow → environment: staging, image_tag: latest
-#     OR locally (needs Docker): DEPLOY-CHECKLIST.md step 3.
+Edit `terraform.tfvars` (set `environment = "staging"`, your region, `cors_origins`), then:
 
-# 5c. Migrations (from repo root, after apply)
+```bash
+terraform init
+terraform plan
+terraform apply
+```
+
+Review the plan before typing `yes` on apply.
+
+**5b — Images.** Easiest path (no Docker): GitHub → **Actions → Deploy → Run workflow** →
+environment `staging`, image_tag `latest`. Local alternative (needs Docker):
+`DEPLOY-CHECKLIST.md` step 3.
+
+**5c — Database migrations** (same terminal, after apply):
+
+```bash
 cd ~/Projects/aurora
 SECRET_ARN=$(cd infra/terraform && terraform output -raw database_secret_arn)
 DATABASE_URL=$(aws secretsmanager get-secret-value --secret-id "$SECRET_ARN" --query SecretString --output text)
 source apps/api/.venv/bin/activate
-cd packages/database && alembic -x url="$DATABASE_URL" upgrade head
+cd packages/database
+alembic -x url="$DATABASE_URL" upgrade head
+```
 
-# 5d. Optional staging demo tenant
+**5d — Optional staging demo tenant:**
+
+```bash
 python -m aurora_db.seed --demo nimbus --verify --url "$DATABASE_URL" --scale 0.1
+```
 
-# 5e. Smoke test
-ALB=$(cd ~/Projects/aurora/infra/terraform && terraform output -raw alb_dns_name)
+**5e — Smoke test** (k6 runs properly against staging):
+
+```bash
+cd ~/Projects/aurora
+ALB=$(cd infra/terraform && terraform output -raw alb_dns_name)
 curl -sf "http://${ALB}/api/v1/health"
-BASE_URL="http://${ALB}/api/v1" ~/Projects/aurora/scripts/load-test.sh   # k6 runs properly against staging
+BASE_URL="http://${ALB}/api/v1" ./scripts/load-test.sh
 ```
 
 **Verify:** health returns `{"status":"ok"...}`; ECS services healthy in the console;
