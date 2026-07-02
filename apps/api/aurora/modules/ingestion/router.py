@@ -137,8 +137,9 @@ def post_ingestion_sync(
 def get_ingestion_job(
     job_id: str,
     context: AuthContext = Depends(require_permission(Permission.MANAGE_DATA_SOURCES)),
+    session: Optional[Session] = Depends(get_db_session),
 ) -> dict:
-    job = get_job(job_id)
+    job = get_job(job_id, session=session, company_id=context.tenant_id)
     if job is None or job.get("company_id") != context.tenant_id:
         raise NotFound("Ingestion job not found")
     return {"data": job, "meta": {"request_id": get_request_id()}}
@@ -147,6 +148,7 @@ def get_ingestion_job(
 @router.get("/ingestion/jobs")
 def get_ingestion_jobs(
     context: AuthContext = Depends(require_permission(Permission.MANAGE_DATA_SOURCES)),
+    session: Optional[Session] = Depends(get_db_session),
 ) -> dict:
-    items = list_jobs(context.tenant_id)
+    items = list_jobs(context.tenant_id, session=session)
     return {"data": items, "meta": {"request_id": get_request_id()}}
