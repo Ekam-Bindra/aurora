@@ -51,6 +51,26 @@ skipped-and-flagged if it exceeds its box) · docs sync, handoff updates, commit
 - **`scripts/local-run.sh` contains leftover Cursor debug instrumentation** (`_agent_log` writing
   to `.cursor/debug-dbff07.log`). Harmless; left untouched (not in scope). Flagging for cleanup.
 
+## Session 2 (2026-07-01, same day) — "complete the list, continue development"
+
+User authorized acting on their behalf for anything obtainable, and directed completing the
+remaining list + continuing development. Outcomes:
+
+| # | Task | Status | Outcome notes |
+|---|------|--------|---------------|
+| S2-1 | Install `aws` CLI | ✅ | v2 pkg installer fails user-locally (no sudo); **aws-cli v1.44 via pip** into `.tools/aws-venv`, `.tools/aws` symlink; `deploy-check.sh` now finds it (preflight: only Docker still FAILs) |
+| S2-2 | Install `k6` | ✅ | v2.1.0 arm64 binary in `.tools/k6`; `load-test.sh` picks it up |
+| S2-3 | Install Docker | 🚫 user-only | Needs admin install (Docker Desktop / colima). **Optional for deploys**: `.github/workflows/deploy.yml` builds images in Actions |
+| S2-4 | **Persistence development** (the Q-6 decision, resolved as "persist") | ✅ | Board reports → `board_report` (+`content` col), ingestion jobs → new `ingestion_job` table, simulation runs → `run_id`-grouped `simulation_result` rows; migration `0002`; in-memory fallback kept for no-DB test mode; failed ingestion runs roll back partial inserts but persist the failed job; 4 new cross-instance + tenant-isolation tests |
+| S2-5 | SQLite schema-evolution fix (found via E2E failure) | ✅ | `create_all` never adds columns to existing tables → stale `data/*.db` 500ed after 0002. Startup now runs **Alembic upgrade head** for file-backed SQLite; stale DBs self-heal (verified against the real stale `aurora_e2e.db`) |
+| S2-6 | Web lint under Next 16 | ✅ | `next lint` removed in 16 → ESLint 9 flat config with `eslint-config-next` arrays; new `set-state-in-effect` rule flags 8 pre-existing fetch-on-mount sites (downgraded to warnings pending refactor) |
+| S2-7 | eslint 10.6.0 (new Dependabot PR) | ⏭️ rejected | `eslint-plugin-react` (transitive) caps at eslint 9 and crashes on a removed API; documented in `eslint.config.mjs`; PR closed |
+| S2-8 | React 19.2.x group bump (new Dependabot PR) | ✅ | react/react-dom/@types 18→19; typecheck + lint + build + 4 E2E green; stale PR branch closed |
+| S2-9 | Remote branch cleanup + close Dependabot PRs | ✅ | 12 merged `feat/*` + 5 dependabot branches deleted on origin (closes PRs #12–#14 + the two new ones) |
+| S2-10 | `local-run.sh` debug-cruft removal | ✅ | Leftover Cursor `_agent_log` instrumentation stripped |
+| S2-11 | ADR §12 gap | ✅ no change needed | Section exists in `system-architecture.md:557` — session 1's doc-sweep claim was wrong |
+| S2-12 | k6 load test run | ⏭️ flagged | k6 executes, but ~50–85% connection-level failures **specific to k6 on this machine**; API exonerated: 300/300 concurrent curl requests 200 OK, k6's own p95 latency 81ms on successful requests, zero non-200s in API logs. Rerun k6 against staging post-deploy |
+
 ## Blocked / not-executed items (carried to final report)
 
 | Item | Why | Owner action |

@@ -11,10 +11,13 @@
 |------|-------|
 | **Repo (local)** | `/Users/ekambindra/Projects/aurora` |
 | **GitHub** | https://github.com/Ekam-Bindra/aurora |
-| **`main` commit** | `d93d291` (untouched this session) |
-| **Branch** | `ekam-testing` — 2026-07-01 deploy-prep session (seed fix, dep bumps, docs); awaiting user review/merge |
-| **Session docs** | `docs/deploy-prep/` — requirements, design, task list + outcomes |
-| **Next work** | User: review/merge `ekam-testing`, close stale Dependabot PRs #12–#14, decide Q-1…Q-7 (`docs/deploy-prep/requirements.md` §6), then first AWS deploy (needs `aws`/`docker` CLIs + credentials on this machine) |
+| **`main` commit** | `d93d291` (untouched across both 2026-07-01 sessions) |
+| **Branch** | `ekam-testing` — deploy-prep + persistence development; awaiting user review/merge |
+| **Session docs** | `docs/deploy-prep/` — requirements, design, task list + outcomes (both sessions) |
+| **Web stack** | next 16.2 · react 19.2 · typescript 6.0 · tailwind 4.3 · eslint 9 flat config — all build+E2E-gated |
+| **Stores** | Board reports / ingestion jobs / simulation runs persist to DB (migration `0002`); safe for `desired_count = 2` |
+| **Tests** | **120 pytest** + 4 Playwright E2E green |
+| **Next work** | User: review/merge `ekam-testing`; then AWS credentials + Docker (or GitHub-Actions deploy path) → `docs/DEPLOY-CHECKLIST.md` |
 | **Demo login** | `cfo@nimbus.test` / `aurora-demo-2026` |
 | **Local API** | `./scripts/local-run.sh` → http://localhost:8000 |
 | **Local web** | `./scripts/dev-web.sh` → http://localhost:3000 |
@@ -90,14 +93,15 @@ Phases 1–3 landed on `main` before numbered PR workflow (commits `9ad7c61`, `2
 
 | Priority | Item | Notes |
 |----------|------|-------|
-| **P0** | **Merge `ekam-testing` → `main`** | User review; branch holds seed fix (CI on `main` is red without it — see 2026-07-01 session), dep bumps, docs |
-| **P0** | **First AWS production deploy** | **Blocked on machine tooling:** `aws` + `docker` CLIs and credentials not installed. Then `./scripts/deploy-check.sh`, `docs/DEPLOY-CHECKLIST.md`: Terraform apply → ECR push → migrations → ECS deploy |
-| **P0 (pre-deploy decision)** | In-memory stores × `api_desired_count = 2` | Board reports / simulations / ingestion jobs are per-process dicts (`board_reports.py:28`, `simulation.py:19`, `ingestion.py:26`); with 2 ECS API tasks behind the ALB these break. Persist them, or set `api_desired_count = 1` for first deploy (`infra/terraform/variables.tf:40`) |
-| Optional | Close Dependabot PRs **#12–#14** | Superseded: bumps applied + tested on `ekam-testing` (2026-07-01). The PR branches are stale — merging them would revert PRs #10/#11 and remove the E2E scripts |
-| Optional | Remote branch cleanup | Local merged `feat/*` branches deleted 2026-07-01; remote deletion awaits user approval |
-| Future | Real AI provider | Swap `AI_PROVIDER=mock` for OpenAI/Anthropic when keys available |
-| Future | Neo4j/Redis job queues | P6/P7 in-memory stores → persistent queues in production (overlaps the pre-deploy decision above) |
-| Future | Board report persistence | `BoardReport` table exists (`models/intelligence.py:150`) but service is in-memory (overlaps the pre-deploy decision above) |
+| **P0** | **Merge `ekam-testing` → `main`** | User review; branch holds the seed fix (CI on `main` stays red without it), persistence feature, dep bumps, docs. 14 commits |
+| **P0** | **First AWS production deploy** | User-only inputs left: AWS credentials (`aws configure` — CLI now at `.tools/aws`), Docker (admin install; **optional** if deploying via GitHub Actions), GitHub secrets `AWS_ROLE_ARN`/`AWS_REGION`. Then `docs/DEPLOY-CHECKLIST.md` |
+| Done 2026-07-01 | ~~In-memory stores × `desired_count = 2`~~ | Resolved by persistence: `board_report.content`, `ingestion_job` table, `run_id`-grouped `simulation_result` (migration `0002`); SQLite dev DBs self-heal via Alembic-at-startup |
+| Done 2026-07-01 | ~~Dependabot PRs #12–#14 + new eslint-10/react-19 PRs~~ | All five closed: ts 6 / next 16 / tailwind 4 / react 19 applied+tested on `ekam-testing`; **eslint 10 rejected** (eslint-plugin-react caps at 9 — retry when eslint-config-next updates) |
+| Done 2026-07-01 | ~~Branch cleanup~~ | 12 merged `feat/*` + 5 dependabot branches deleted locally and on origin |
+| Follow-up | k6 against staging | Local k6 run has machine-specific connection failures (API exonerated — see `docs/deploy-prep/tasks.md` S2-12); run `BASE_URL=<alb> ./scripts/load-test.sh` post-deploy |
+| Follow-up | 8 `set-state-in-effect` lint warnings | Pre-existing fetch-on-mount patterns flagged by eslint-config-next 16's new rule; refactor to event-driven loading when convenient |
+| Future | Real AI provider | Swap `AI_PROVIDER=mock` for OpenAI/Anthropic when keys available (user to supply key + provider choice) |
+| Future | Redis job queues | Async workers for long simulations/report renders; DB-backed state (above) already covers multi-task correctness |
 
 ---
 
@@ -257,7 +261,8 @@ Breakdown by package: api 78 · database 17 · ml 10 · graph 2 · simulations 6
 
 | Date | Update |
 |------|--------|
-| 2026-07-01 | **Deploy-prep session (`ekam-testing`):** fixed date-rollover seed bug (anomalies A/B now pinned vs neighbor months — suite was red since the July rollover; CI on `main` red until merged); bumped typescript 6.0.3 / next 16.2.x / tailwindcss 4.3.1 with build+E2E gates (Tailwind 4 PostCSS migration included); Dependabot PRs #12–#14 superseded (stale branches — do not merge); deploy preflight run (only FAILs = missing `aws`/`docker` CLIs); README + web README synced to merged reality; local merged `feat/*` branches deleted; session docs under `docs/deploy-prep/` incl. open questions Q-1…Q-7; 116 pytest + 4 E2E green |
+| 2026-07-01 | **Session 2 (`ekam-testing`):** persisted board reports / ingestion jobs / simulation runs to DB (migration `0002`, 120 pytest green) resolving the `desired_count=2` risk; Alembic-at-startup for file-backed SQLite (stale dev DBs self-heal — found via real E2E failure); react 19.2 bump gated green; ESLint 9 flat-config migration (`next lint` removed in 16; eslint 10 rejected — plugin incompat); aws CLI v1 + k6 installed into `.tools` with script fallbacks; 12 `feat/*` + 5 dependabot branches deleted on origin (PRs #12–#14 + eslint-10 + react-19 closed as superseded); k6-local flagged machine-specific (API exonerated 300/300); Docker + AWS credentials + GitHub secrets remain user-only |
+| 2026-07-01 | **Session 1 — deploy-prep (`ekam-testing`):** fixed date-rollover seed bug (anomalies A/B now pinned vs neighbor months — suite was red since the July rollover; CI on `main` red until merged); bumped typescript 6.0.3 / next 16.2.x / tailwindcss 4.3.1 with build+E2E gates (Tailwind 4 PostCSS migration included); Dependabot PRs #12–#14 superseded (stale branches — do not merge); deploy preflight run (only FAILs = missing `aws`/`docker` CLIs); README + web README synced to merged reality; local merged `feat/*` branches deleted; session docs under `docs/deploy-prep/` incl. open questions Q-1…Q-7; 116 pytest + 4 E2E green |
 | 2026-06-29 | **Session end:** comprehensive handoff; P1–P9 + PRs #15–#17 complete; deploy checklist ready; 116 pytest + 4 E2E |
 | 2026-06-29 | Deploy readiness (PR #16): preflight script, first-deploy checklist, Terraform fixes |
 | 2026-06-29 | E2E (PR #17): Playwright suite, `docs/E2E.md` |
