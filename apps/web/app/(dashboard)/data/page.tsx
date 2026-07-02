@@ -268,16 +268,16 @@ export default function DataSourcesPage() {
   }, []);
 
   useEffect(() => {
-    refresh()
+    Promise.resolve()
+      .then(refresh)
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   }, [refresh]);
 
   useEffect(() => {
-    if (!selectedJobId) {
-      setJobDetail(null);
-      return;
-    }
+    // Selection is never cleared once made, and the detail panel renders only
+    // when the loaded detail matches the selection, so no reset is needed here.
+    if (!selectedJobId) return;
     getIngestionJob(selectedJobId)
       .then(setJobDetail)
       .catch((e: Error) => setError(e.message));

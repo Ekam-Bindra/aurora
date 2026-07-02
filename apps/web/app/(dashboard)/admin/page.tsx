@@ -53,15 +53,9 @@ function UsersTab({
   onUpdated: () => void;
 }) {
   const [savingId, setSavingId] = useState<string | null>(null);
+  // Holds unsaved edits only; the rendered value falls back to the user's
+  // server-side role, so no effect is needed to mirror `users` into state.
   const [draftRoles, setDraftRoles] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    const initial: Record<string, string> = {};
-    for (const u of users) {
-      initial[u.id] = u.roles[0] ?? "";
-    }
-    setDraftRoles(initial);
-  }, [users]);
 
   const onSaveRole = async (user: WorkspaceUser) => {
     const nextRole = draftRoles[user.id];
@@ -385,15 +379,15 @@ export default function AdminPage() {
   useEffect(() => {
     if (!user) return;
     if (canManageUsers) {
-      loadUsers();
+      Promise.resolve().then(loadUsers);
     } else if (canViewAudit) {
-      setTab("audit");
+      Promise.resolve().then(() => setTab("audit"));
     }
   }, [user, canManageUsers, canViewAudit, loadUsers]);
 
   useEffect(() => {
     if (user && tab === "audit" && canViewAudit) {
-      loadAudit(auditPage);
+      Promise.resolve().then(() => loadAudit(auditPage));
     }
   }, [user, tab, canViewAudit, auditPage, loadAudit]);
 

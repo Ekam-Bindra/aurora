@@ -9,14 +9,6 @@ const config = [
     ignores: [".next/**", "node_modules/**", "test-results/**", "next-env.d.ts"],
   },
   ...coreWebVitals,
-  {
-    rules: {
-      // The strict set-state-in-effect rule arrived with eslint-config-next 16
-      // and flags the app's pre-existing fetch-on-mount patterns (8 sites).
-      // Kept visible as warnings pending a dedicated data-loading refactor.
-      "react-hooks/set-state-in-effect": "warn",
-    },
-  },
 ];
 
 export default config;

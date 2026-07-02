@@ -201,8 +201,10 @@ export default function GraphExplorer({
   }, [rootNode.id, mode, depth]);
 
   useEffect(() => {
-    setSelectedId(rootNode.id);
-    load();
+    Promise.resolve().then(() => {
+      setSelectedId(rootNode.id);
+      load();
+    });
   }, [rootNode.id, mode, depth, load]);
 
   const flowNodes = useMemo(
