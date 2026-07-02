@@ -5,15 +5,16 @@
 
 ---
 
-## Quick state (session end — 2026-06-29)
+## Quick state (session end — 2026-07-01)
 
 | Item | Value |
 |------|-------|
 | **Repo (local)** | `/Users/ekambindra/Projects/aurora` |
 | **GitHub** | https://github.com/Ekam-Bindra/aurora |
-| **`main` commit** | Latest on `origin/main` — run `git rev-parse --short HEAD` after pull |
-| **Branch** | `main` — all phases + post-MVP work merged |
-| **Next work** | First AWS production deploy |
+| **`main` commit** | `d93d291` (untouched this session) |
+| **Branch** | `ekam-testing` — 2026-07-01 deploy-prep session (seed fix, dep bumps, docs); awaiting user review/merge |
+| **Session docs** | `docs/deploy-prep/` — requirements, design, task list + outcomes |
+| **Next work** | User: review/merge `ekam-testing`, close stale Dependabot PRs #12–#14, decide Q-1…Q-7 (`docs/deploy-prep/requirements.md` §6), then first AWS deploy (needs `aws`/`docker` CLIs + credentials on this machine) |
 | **Demo login** | `cfo@nimbus.test` / `aurora-demo-2026` |
 | **Local API** | `./scripts/local-run.sh` → http://localhost:8000 |
 | **Local web** | `./scripts/dev-web.sh` → http://localhost:3000 |
@@ -89,12 +90,14 @@ Phases 1–3 landed on `main` before numbered PR workflow (commits `9ad7c61`, `2
 
 | Priority | Item | Notes |
 |----------|------|-------|
-| **P0** | **First AWS production deploy** | Run `./scripts/deploy-check.sh`, follow `docs/DEPLOY-CHECKLIST.md`: Terraform apply → ECR push → migrations → ECS deploy via `.github/workflows/deploy.yml` |
-| Optional | Dependabot PRs **#12–#14** | Open bumps: `next@16.2.9`, `tailwindcss@4.3.1`, `typescript@6.0.3` — review/test before merge |
-| Optional | Branch cleanup | Delete stale `feat/*` branches after verifying `main` |
+| **P0** | **Merge `ekam-testing` → `main`** | User review; branch holds seed fix (CI on `main` is red without it — see 2026-07-01 session), dep bumps, docs |
+| **P0** | **First AWS production deploy** | **Blocked on machine tooling:** `aws` + `docker` CLIs and credentials not installed. Then `./scripts/deploy-check.sh`, `docs/DEPLOY-CHECKLIST.md`: Terraform apply → ECR push → migrations → ECS deploy |
+| **P0 (pre-deploy decision)** | In-memory stores × `api_desired_count = 2` | Board reports / simulations / ingestion jobs are per-process dicts (`board_reports.py:28`, `simulation.py:19`, `ingestion.py:26`); with 2 ECS API tasks behind the ALB these break. Persist them, or set `api_desired_count = 1` for first deploy (`infra/terraform/variables.tf:40`) |
+| Optional | Close Dependabot PRs **#12–#14** | Superseded: bumps applied + tested on `ekam-testing` (2026-07-01). The PR branches are stale — merging them would revert PRs #10/#11 and remove the E2E scripts |
+| Optional | Remote branch cleanup | Local merged `feat/*` branches deleted 2026-07-01; remote deletion awaits user approval |
 | Future | Real AI provider | Swap `AI_PROVIDER=mock` for OpenAI/Anthropic when keys available |
-| Future | Neo4j/Redis job queues | P6/P7 in-memory stores → persistent queues in production |
-| Future | Board report persistence | `BoardReport` table wired for prod (store currently in-memory locally) |
+| Future | Neo4j/Redis job queues | P6/P7 in-memory stores → persistent queues in production (overlaps the pre-deploy decision above) |
+| Future | Board report persistence | `BoardReport` table exists (`models/intelligence.py:150`) but service is in-memory (overlaps the pre-deploy decision above) |
 
 ---
 
@@ -243,6 +246,10 @@ Breakdown by package: api 78 · database 17 · ml 10 · graph 2 · simulations 6
 5. **Cursor auto-run** — user wants agent mode without validating each shell command
 6. **Docs-first** — follow `docs/`; don't re-architect without user approval
 7. **No commits unless asked** — unless user explicitly requests save/sync
+8. **Work on `ekam-testing`, never `main`** (2026-07-01 prompt: "at all times") — commits land on
+   `ekam-testing`; merging to `main` is the user's call
+9. **Skip-and-flag protocol** (2026-07-01) — if stuck on an item: skip it, mark it high priority,
+   continue, report at the end; report all confusions as questions and surface gaps/overlooked items
 
 ---
 
@@ -250,6 +257,7 @@ Breakdown by package: api 78 · database 17 · ml 10 · graph 2 · simulations 6
 
 | Date | Update |
 |------|--------|
+| 2026-07-01 | **Deploy-prep session (`ekam-testing`):** fixed date-rollover seed bug (anomalies A/B now pinned vs neighbor months — suite was red since the July rollover; CI on `main` red until merged); bumped typescript 6.0.3 / next 16.2.x / tailwindcss 4.3.1 with build+E2E gates (Tailwind 4 PostCSS migration included); Dependabot PRs #12–#14 superseded (stale branches — do not merge); deploy preflight run (only FAILs = missing `aws`/`docker` CLIs); README + web README synced to merged reality; local merged `feat/*` branches deleted; session docs under `docs/deploy-prep/` incl. open questions Q-1…Q-7; 116 pytest + 4 E2E green |
 | 2026-06-29 | **Session end:** comprehensive handoff; P1–P9 + PRs #15–#17 complete; deploy checklist ready; 116 pytest + 4 E2E |
 | 2026-06-29 | Deploy readiness (PR #16): preflight script, first-deploy checklist, Terraform fixes |
 | 2026-06-29 | E2E (PR #17): Playwright suite, `docs/E2E.md` |

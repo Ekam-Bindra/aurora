@@ -3,18 +3,17 @@
 The AURORA executive frontend — Next.js (App Router) + TypeScript + Tailwind, using the design
 system in [`docs/architecture/ui-ux-plan.md`](../../docs/architecture/ui-ux-plan.md).
 
-## Phase 1 status
+## Status (Phases 1–8 merged)
 
-Foundation scaffolding (see [`docs/roadmap/implementation-roadmap.md`](../../docs/roadmap/implementation-roadmap.md)):
+All dashboard modules are wired to live API data (see
+[`docs/roadmap/implementation-roadmap.md`](../../docs/roadmap/implementation-roadmap.md)):
 
-- ✅ App shell with RBAC-aware sidebar navigation
-- ✅ Dark-first theme wired to the shared design tokens (`@aurora/config/tailwind`)
-- ✅ Login page (calls `POST /auth/login`) + token handling
-- ✅ Executive dashboard route with placeholder KPI tiles
-- ⏭️ Live data wiring (metrics, forecast, risk, simulator, agent) lands in Phases 3–6
-
-> The KPI values on the overview page are placeholders until the Financial Intelligence engine
-> is wired in Phase 3. Navigation items not yet built are marked “soon”.
+- ✅ App shell with RBAC-aware sidebar navigation, dark-first theme (`@aurora/config/tailwind`)
+- ✅ Login page (`POST /auth/login`) + token handling
+- ✅ Executive dashboard with live KPIs, forecasting, risk genome, graph explorer,
+  Monte Carlo simulations, AI agent chat, explain overlay
+- ✅ Data sources (CSV upload + job status), board reports, admin console
+- ✅ 4 Playwright E2E flows in `e2e/` (see [`docs/E2E.md`](../../docs/E2E.md))
 
 ## Develop
 
@@ -27,6 +26,13 @@ pnpm --filter @aurora/web dev      # http://localhost:3000
 export NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
 ```
 
+## Test
+
+```bash
+pnpm test:e2e:install   # one-time: download the Playwright chromium binary
+pnpm test:e2e           # boots API (scripts/e2e-api.sh) + web, runs 4 flows
+```
+
 ## Layout
 
 ```
@@ -36,6 +42,10 @@ app/
 ├── (auth)/login/         # sign-in
 └── (dashboard)/
     ├── layout.tsx        # authenticated shell + sidebar
-    └── overview/         # executive dashboard
-lib/api.ts                # thin API client (replaced by generated client in Phase 2)
+    └── overview/         # executive dashboard (plus admin, agent, data,
+                          #   financials, forecasting, graph, reports, risk,
+                          #   simulations routes)
+components/               # agent, explain, forecast, graph, risk, simulation
+e2e/                      # Playwright specs + fixtures + auth helper
+lib/api.ts                # thin API client
 ```
