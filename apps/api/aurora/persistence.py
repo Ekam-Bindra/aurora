@@ -14,7 +14,12 @@ from aurora_db.base import Base
 from aurora_db.session import make_engine, make_session_factory
 from sqlalchemy.orm import Session, sessionmaker
 
-_REPO_ROOT = Path(__file__).resolve().parents[3]
+# Monorepo checkout: apps/api/aurora/persistence.py -> repo root is parents[3].
+# In the container the package installs at /app/aurora/, which has no third
+# parent — fall back to the working directory (only relative SQLite dev URLs
+# ever use this).
+_parents = Path(__file__).resolve().parents
+_REPO_ROOT = _parents[3] if len(_parents) > 3 else Path.cwd()
 
 
 def _normalize_database_url(url: str) -> str:
