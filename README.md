@@ -115,27 +115,29 @@ Rationale for each choice is in
 
 ---
 
-## Quickstart (planned)
+## Quickstart
 
-> ⚠️ Not yet runnable. The commands below describe the **intended** local developer
-> experience once the MVP build (see [`docs/roadmap/mvp-scope.md`](docs/roadmap/mvp-scope.md))
-> is implemented. The authoritative, maintained instructions live in the
-> [deployment guide](docs/deployment/deployment-guide.md).
+No Docker required for local development — the API runs on SQLite and auto-seeds the
+Nimbus demo tenant on first boot.
 
 ```bash
 # 1. Clone and configure
 git clone <repo-url> aurora && cd aurora
-cp .env.example .env            # fill in AI provider keys, or leave blank to use the offline mock
+cp .env.example .env            # defaults work locally; AI_PROVIDER=mock needs no keys
 
-# 2. Bring up the full stack (api, web, postgres, neo4j, redis, minio)
-docker compose up -d
+# 2. Terminal 1 — API (SQLite, auto-seeds Nimbus)
+./scripts/local-run.sh          # → http://localhost:8000/api/v1/docs
 
-# 3. Seed the demo company "Nimbus Retail Systems"
-docker compose exec api python -m aurora.seed --demo nimbus
+# 3. Terminal 2 — Web (proxies /api/v1 → :8000)
+./scripts/dev-web.sh            # → http://localhost:3000
 
-# 4. Open the executive dashboard
-open http://localhost:3000        # login: demo@nimbus.test / see seed output
+# 4. Log in
+#    cfo@nimbus.test / aurora-demo-2026
 ```
+
+Full Docker stack (Postgres, Neo4j, Redis, MinIO, nginx) remains available via
+`docker compose -f infra/docker/docker-compose.yml up -d` — see the
+[deployment guide](docs/deployment/deployment-guide.md).
 
 ---
 
@@ -149,9 +151,14 @@ open http://localhost:3000        # login: demo@nimbus.test / see seed output
 | Backend API — Phase 1 | **Implemented** — FastAPI auth/RBAC, multi-tenancy, seeded demo, tests (`apps/api`) |
 | Persistence — Phase 2 | **Implemented** — SQLAlchemy models, Alembic, tenant repositories, Nimbus seeder (`packages/database`) |
 | Financial intelligence — Phase 3 | **Implemented** — DuckDB marts, calculators (`packages/ml`), `/metrics/*` + `/financials/*` APIs, live dashboard KPIs |
-| Knowledge graph — Phase 4 | **In progress** — `packages/graph`, `/graph/*`, impact analysis UI (`feat/phase-4-knowledge-graph`) |
-| Web shell — Phase 1 | **Scaffolded** — Next.js dashboard shell (`apps/web`) |
-| Infrastructure code | Docker Compose + GitHub Actions CI in place; cloud IaC next |
+| Knowledge graph — Phase 4 | **Implemented** — `packages/graph`, `/graph/*`, impact analysis, React Flow explorer |
+| Forecasting + Risk — Phase 5 | **Implemented** — forecast + risk engines (`packages/ml`), `/forecasts/*` + `/risk/*`, UI pages |
+| Simulation + AI agent — Phase 6 (MVP) | **Implemented** — Monte Carlo engine (`packages/simulations`), mock AI agent, explain overlay, executive dashboard |
+| Ingestion + connectors — Phase 7 | **Implemented** — CSV upload, source registry, job status, Data Sources UI |
+| Board reports + Admin — Phase 8 | **Implemented** — board pack generation, audit trail, admin console |
+| AWS + hardening — Phase 9 | **Implemented** — Terraform (VPC/ECS/RDS/ALB/ECR), OIDC SSO, security middleware, ClickHouse path |
+| Web executive UI | **Implemented** — Next.js App Router dashboard across all modules, 4 Playwright E2E flows (`apps/web`) |
+| Infrastructure code | Docker Compose, GitHub Actions CI + manual deploy workflow, AWS Terraform (`infra/`) — first production deploy pending |
 
 ---
 
