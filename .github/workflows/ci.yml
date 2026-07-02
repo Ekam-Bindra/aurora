@@ -166,5 +166,41 @@ jobs:
           cache: pnpm
       - name: Install
         run: pnpm install --frozen-lockfile
+      - name: Lint
+        run: pnpm --filter @aurora/web lint
+      - name: Typecheck
+        run: pnpm --filter @aurora/web typecheck
       - name: Build
         run: pnpm --filter @aurora/web build
+
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install web deps
+        run: pnpm install --frozen-lockfile
+      - name: Install Playwright chromium
+        run: pnpm --filter @aurora/web test:e2e:install
+      - name: Run E2E suite (boots API + web via playwright webServer)
+        run: pnpm --filter @aurora/web test:e2e
+        env:
+          CI: "true"
+          DEMO_SEED_SCALE: "0.05"
+      - name: Upload traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: apps/web/test-results/
+          retention-days: 7
