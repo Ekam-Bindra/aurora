@@ -7,6 +7,7 @@ from .intelligence import (
     AIInteraction,
     BoardReport,
     Forecast,
+    IngestionJob,
     Recommendation,
     RiskSignal,
     Scenario,
@@ -45,4 +46,5 @@ __all__ = [
     "Recommendation",
     "AIInteraction",
     "BoardReport",
+    "IngestionJob",
 ]

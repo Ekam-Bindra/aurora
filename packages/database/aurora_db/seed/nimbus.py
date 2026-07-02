@@ -80,8 +80,10 @@ SEASONAL = {
 
 # Ground truth for the injected anomalies (also stored on company.settings).
 ANOMALY_MANIFEST = [
-    {"id": "A", "name": "Marketing expense spike", "month_index": 13, "magnitude": "+180%"},
-    {"id": "B", "name": "Revenue dip", "month_index": 16, "magnitude": "-22%"},
+    {"id": "A", "name": "Marketing expense spike", "month_index": 13,
+     "magnitude": "+180% vs adjacent months"},
+    {"id": "B", "name": "Revenue dip", "month_index": 16,
+     "magnitude": "-30% vs adjacent months"},
     {"id": "C", "name": "Liquidity squeeze", "month_index": [19, 20, 21, 22, 23]},
     {"id": "D", "name": "Customer concentration creep", "month_index": list(range(24, 36))},
     {"id": "E", "name": "Vendor delivery slip", "month_index": 27, "entity": CRITICAL_VENDOR},
@@ -413,7 +415,10 @@ def seed_nimbus(
     for m in range(MONTHS):
         noise = float(np.clip(rng.normal(1.0, 0.04), 0.85, 1.15))
         revenue[m] = base * (monthly_growth**m) * SEASONAL[months[m].month] * noise
-    revenue[16] *= 1.0 - 0.22  # anomaly B: revenue dip
+    # Anomaly B: revenue dip, pinned relative to its realized neighbors. The window is
+    # anchored to today's month, so a flat multiplier can land on a seasonal peak
+    # (Nov/Dec) and still sit above the neighbor mean the verifier compares against.
+    revenue[16] = 0.70 * (revenue[15] + revenue[17]) / 2.0
 
     gross_margin = np.linspace(0.39, 0.42, MONTHS)
     cogs = revenue * (1.0 - gross_margin)
@@ -565,8 +570,9 @@ def seed_nimbus(
                 }
             )
         marketing = revenue[m] * 0.06
-        if m == 13:  # anomaly A
-            marketing *= 2.8
+        if m == 13:  # anomaly A: spike pinned vs realized neighbors (see anomaly B note)
+            neighbor_revenue = (revenue[11] + revenue[12] + revenue[14] + revenue[15]) / 4.0
+            marketing = 2.8 * neighbor_revenue * 0.06
         exp_rows.append(
             {
                 "id": new_uuid(), "company_id": cid, "department_id": dept_ids["MKT"],

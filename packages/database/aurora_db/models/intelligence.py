@@ -102,11 +102,16 @@ class SimulationResult(UUIDPrimaryKeyMixin, TenantScopedMixin, CreatedAtMixin, B
     scenario_id: Mapped[str] = mapped_column(
         GUID, ForeignKey("scenario.id", ondelete="CASCADE"), nullable=False, index=True
     )
+    # One simulation run produces one row per metric; rows share a run_id so the run
+    # can be reconstructed across processes (nullable for pre-0002 rows).
+    run_id: Mapped[Optional[str]] = mapped_column(GUID, index=True)
     metric: Mapped[str] = mapped_column(String(48), nullable=False)
     summary: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     distribution: Mapped[Optional[dict]] = mapped_column(JSONB)
     risk_deltas: Mapped[Optional[dict]] = mapped_column(JSONB)
     recommendations: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    driver_sensitivity: Mapped[Optional[list]] = mapped_column(JSONB)
+    seed: Mapped[Optional[int]] = mapped_column(Integer)
     trials: Mapped[int] = mapped_column(Integer, nullable=False)
     model_version: Mapped[Optional[str]] = mapped_column(String(32))
 
@@ -159,7 +164,34 @@ class BoardReport(UUIDPrimaryKeyMixin, TenantScopedMixin, TimestampMixin, Base):
     period_start: Mapped[Optional[date]] = mapped_column(Date)
     period_end: Mapped[Optional[date]] = mapped_column(Date)
     sections: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    content: Mapped[Optional[dict]] = mapped_column(JSONB)
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
     export_url: Mapped[Optional[str]] = mapped_column(Text)
     created_by: Mapped[Optional[str]] = mapped_column(GUID)
     approved_by: Mapped[Optional[str]] = mapped_column(GUID)
+
+
+class IngestionJob(UUIDPrimaryKeyMixin, TenantScopedMixin, CreatedAtMixin, Base):
+    """Ingestion job status shared across API instances (upload + connector sync)."""
+
+    __tablename__ = "ingestion_job"
+    __table_args__ = (
+        CheckConstraint(
+            "status in ('queued','running','completed','failed')", name="status_valid"
+        ),
+    )
+
+    target: Mapped[str] = mapped_column(String(32), nullable=False)
+    source_id: Mapped[Optional[str]] = mapped_column(
+        GUID, ForeignKey("data_source.id", ondelete="SET NULL")
+    )
+    filename: Mapped[Optional[str]] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="queued")
+    rows_total: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    rows_inserted: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    rows_updated: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    rows_rejected: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    errors: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    lineage_ref: Mapped[Optional[str]] = mapped_column(Text)
+    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))

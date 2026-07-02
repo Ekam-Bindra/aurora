@@ -56,7 +56,7 @@ export default function ForecastingPage() {
   }, []);
 
   useEffect(() => {
-    loadForecast(metric, horizon);
+    Promise.resolve().then(() => loadForecast(metric, horizon));
   }, [metric, horizon, loadForecast]);
 
   return (

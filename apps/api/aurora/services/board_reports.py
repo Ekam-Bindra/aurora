@@ -1,4 +1,9 @@
-"""Board report generator — assembles KPIs, forecast, risk, and scenario data."""
+"""Board report generator — assembles KPIs, forecast, risk, and scenario data.
+
+Storage is dual-mode: with a session the report lives in the ``board_report``
+table (visible to every API instance — ECS runs more than one task); without
+one it falls back to the per-process dict used by the in-memory test mode.
+"""
 
 from __future__ import annotations
 
@@ -7,6 +12,9 @@ import uuid
 from datetime import date, datetime, timezone
 from typing import Any, Dict, List, Optional
 
+from aurora_db.models.intelligence import BoardReport
+from aurora_db.types import new_uuid
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .financial import metrics_overview
@@ -36,6 +44,32 @@ def _report_id() -> str:
     return f"br_{uuid.uuid4().hex[:12]}"
 
 
+def _row_to_dict(row: BoardReport) -> Dict[str, Any]:
+    return {
+        "id": str(row.id),
+        "company_id": str(row.company_id),
+        "title": row.title,
+        "period_start": row.period_start.isoformat() if row.period_start else None,
+        "period_end": row.period_end.isoformat() if row.period_end else None,
+        "sections": list(row.sections or []),
+        "status": row.status,
+        "content": row.content,
+        "export_url": row.export_url,
+        "created_by": str(row.created_by) if row.created_by else None,
+        "approved_by": str(row.approved_by) if row.approved_by else None,
+        "created_at": row.created_at.isoformat() if row.created_at else None,
+        "updated_at": row.updated_at.isoformat() if row.updated_at else None,
+        "ws_channel": f"report:{row.id}",
+    }
+
+
+def _get_row(session: Session, report_id: str, company_id: Optional[str]) -> Optional[BoardReport]:
+    stmt = select(BoardReport).where(BoardReport.id == report_id)
+    if company_id is not None:
+        stmt = stmt.where(BoardReport.company_id == company_id)
+    return session.execute(stmt).scalar_one_or_none()
+
+
 def create_report(
     company_id: str,
     *,
@@ -44,11 +78,27 @@ def create_report(
     period_end: Optional[date],
     sections: Optional[List[str]],
     created_by: Optional[str],
+    session: Optional[Session] = None,
 ) -> Dict[str, Any]:
     chosen = sections or list(DEFAULT_SECTIONS)
     unknown = [s for s in chosen if s not in VALID_SECTIONS]
     if unknown:
         raise ValueError(f"unknown sections: {', '.join(unknown)}")
+
+    if session is not None:
+        row = BoardReport(
+            id=new_uuid(),
+            company_id=company_id,
+            title=title,
+            period_start=period_start,
+            period_end=period_end,
+            sections=chosen,
+            status="draft",
+            created_by=created_by,
+        )
+        session.add(row)
+        session.flush()
+        return _row_to_dict(row)
 
     rid = _report_id()
     payload = {
@@ -71,11 +121,26 @@ def create_report(
     return payload
 
 
-def get_report(report_id: str) -> Optional[Dict[str, Any]]:
+def get_report(
+    report_id: str,
+    *,
+    session: Optional[Session] = None,
+    company_id: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
+    if session is not None:
+        row = _get_row(session, report_id, company_id)
+        return _row_to_dict(row) if row is not None else None
     return _reports.get(report_id)
 
 
-def list_reports(company_id: str) -> List[Dict[str, Any]]:
+def list_reports(company_id: str, *, session: Optional[Session] = None) -> List[Dict[str, Any]]:
+    if session is not None:
+        rows = session.execute(
+            select(BoardReport)
+            .where(BoardReport.company_id == company_id)
+            .order_by(BoardReport.created_at.desc())
+        ).scalars().all()
+        return [_row_to_dict(r) for r in rows]
     items = [r for r in _reports.values() if r.get("company_id") == company_id]
     return sorted(items, key=lambda r: r.get("created_at", ""), reverse=True)
 
@@ -160,11 +225,29 @@ def _build_section_content(
 
 
 def generate_report(session: Session, company_id: str, report_id: str) -> Dict[str, Any]:
+    row = _get_row(session, report_id, company_id)
+    if row is not None:
+        sections_out = [
+            _build_section_content(session, company_id, section)
+            for section in (row.sections or [])
+        ]
+        row.content = {
+            "title": row.title,
+            "period_start": row.period_start.isoformat() if row.period_start else None,
+            "period_end": row.period_end.isoformat() if row.period_end else None,
+            "generated_at": _utcnow(),
+            "sections": sections_out,
+        }
+        row.status = "in_review"
+        row.export_url = f"/api/v1/board-reports/{report_id}/export"
+        session.flush()
+        return _row_to_dict(row)
+
     report = _reports.get(report_id)
     if report is None or report.get("company_id") != company_id:
         raise KeyError("Report not found")
 
-    sections_out: List[Dict[str, Any]] = []
+    sections_out = []
     for section in report.get("sections") or []:
         sections_out.append(_build_section_content(session, company_id, section))
 
@@ -181,7 +264,24 @@ def generate_report(session: Session, company_id: str, report_id: str) -> Dict[s
     return report
 
 
-def approve_report(company_id: str, report_id: str, approved_by: str) -> Dict[str, Any]:
+def approve_report(
+    company_id: str,
+    report_id: str,
+    approved_by: str,
+    *,
+    session: Optional[Session] = None,
+) -> Dict[str, Any]:
+    if session is not None:
+        row = _get_row(session, report_id, company_id)
+        if row is None:
+            raise KeyError("Report not found")
+        if row.content is None:
+            raise ValueError("Report must be generated before approval")
+        row.status = "approved"
+        row.approved_by = approved_by
+        session.flush()
+        return _row_to_dict(row)
+
     report = _reports.get(report_id)
     if report is None or report.get("company_id") != company_id:
         raise KeyError("Report not found")
@@ -219,9 +319,15 @@ def render_html(report: Dict[str, Any]) -> str:
     return "".join(parts)
 
 
-def export_report(report_id: str, fmt: str = "html") -> Optional[tuple]:
+def export_report(
+    report_id: str,
+    fmt: str = "html",
+    *,
+    session: Optional[Session] = None,
+    company_id: Optional[str] = None,
+) -> Optional[tuple]:
     """Return (bytes, media_type, filename) for download."""
-    report = _reports.get(report_id)
+    report = get_report(report_id, session=session, company_id=company_id)
     if report is None or report.get("content") is None:
         return None
     safe_title = (report.get("title") or "board-report").replace(" ", "-")[:40]

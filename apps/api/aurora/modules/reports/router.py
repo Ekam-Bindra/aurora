@@ -57,6 +57,7 @@ def post_board_report(
             period_end=body.period_end,
             sections=body.sections or None,
             created_by=context.user_id,
+            session=session,
         )
     except ValueError as exc:
         raise ValidationError(str(exc)) from exc
@@ -78,8 +79,9 @@ def post_board_report(
 @router.get("")
 def get_board_reports(
     context: AuthContext = Depends(require_permission(Permission.READ_FINANCIALS)),
+    session: Optional[Session] = Depends(get_db_session),
 ) -> dict:
-    items = list_reports(context.tenant_id)
+    items = list_reports(context.tenant_id, session=session)
     return {"data": items, "meta": {"request_id": get_request_id()}}
 
 
@@ -87,8 +89,9 @@ def get_board_reports(
 def get_board_report(
     report_id: str,
     context: AuthContext = Depends(require_permission(Permission.READ_FINANCIALS)),
+    session: Optional[Session] = Depends(get_db_session),
 ) -> dict:
-    data = get_report(report_id)
+    data = get_report(report_id, session=session, company_id=context.tenant_id)
     if data is None or data.get("company_id") != context.tenant_id:
         raise NotFound("Board report not found")
     return {"data": data, "meta": {"request_id": get_request_id()}}
@@ -100,7 +103,7 @@ def post_generate_board_report(
     context: AuthContext = Depends(require_permission(Permission.CREATE_BOARD_REPORT)),
     session: Session = Depends(_require_db),
 ) -> dict:
-    report = get_report(report_id)
+    report = get_report(report_id, session=session, company_id=context.tenant_id)
     if report is None or report.get("company_id") != context.tenant_id:
         raise NotFound("Board report not found")
     try:
@@ -129,12 +132,13 @@ def post_generate_board_report(
 def post_approve_board_report(
     report_id: str,
     context: AuthContext = Depends(require_permission(Permission.APPROVE_BOARD_REPORT)),
+    session: Optional[Session] = Depends(get_db_session),
 ) -> dict:
-    report = get_report(report_id)
+    report = get_report(report_id, session=session, company_id=context.tenant_id)
     if report is None or report.get("company_id") != context.tenant_id:
         raise NotFound("Board report not found")
     try:
-        data = approve_report(context.tenant_id, report_id, context.user_id)
+        data = approve_report(context.tenant_id, report_id, context.user_id, session=session)
     except KeyError as exc:
         raise NotFound("Board report not found") from exc
     except ValueError as exc:
@@ -152,11 +156,12 @@ def get_board_report_export(
     context: AuthContext = Depends(require_any_permission(
         Permission.READ_FINANCIALS, Permission.CREATE_BOARD_REPORT
     )),
+    session: Optional[Session] = Depends(get_db_session),
 ) -> Response:
-    report = get_report(report_id)
+    report = get_report(report_id, session=session, company_id=context.tenant_id)
     if report is None or report.get("company_id") != context.tenant_id:
         raise NotFound("Board report not found")
-    exported = export_report(report_id, fmt=format)
+    exported = export_report(report_id, fmt=format, session=session, company_id=context.tenant_id)
     if exported is None:
         raise NotFound("Report content not generated yet")
     body, media_type, filename = exported

@@ -11,6 +11,11 @@ EMAIL="${EMAIL:-cfo@nimbus.test}"
 PASSWORD="${PASSWORD:-aurora-demo-2026}"
 K6_SCRIPT="$ROOT/tests/load/smoke.js"
 
+# Repo-local k6 (no system install required) — mirrors .tools/terraform.
+if ! command -v k6 >/dev/null 2>&1 && [[ -x "$ROOT/.tools/k6" ]]; then
+  export PATH="$ROOT/.tools:$PATH"
+fi
+
 echo "==> AURORA load/smoke test"
 echo "    BASE_URL=$BASE_URL"
 

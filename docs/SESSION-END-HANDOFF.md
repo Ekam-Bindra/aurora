@@ -1,18 +1,19 @@
 # AURORA — Start Here Tomorrow
 
-> **Session ended:** 2026-06-29 · All 9 build phases + CI/E2E/deploy-readiness merged to `main`.
+> **Session ended:** 2026-07-01 · All work on **`ekam-testing`** (14 commits) — `main` untouched at `d93d291` and its CI is **red** until the seed fix merges.
 
 ---
 
 ## 30-second status
 
-AURORA is a **complete MVP through Phase 9** — monorepo with FastAPI backend, Next.js executive UI, Nimbus demo tenant, 116 pytest tests, and 4 Playwright E2E tests. **Everything is on GitHub.** The only major remaining milestone is the **first AWS production deploy**.
+AURORA is a **complete MVP through Phase 9**, now hardened for multi-instance deploys: board reports, ingestion jobs, and simulation runs persist to the database (migration `0002`), the web stack is on next 16 / react 19 / typescript 6 / tailwind 4 / eslint 9 (all build+E2E gated), and **120 pytest + 4 E2E tests are green on `ekam-testing`**. First AWS deploy still pending — user-only inputs: AWS credentials, Docker (optional if deploying via GitHub Actions), GitHub secrets.
 
 | | |
 |---|---|
-| **Repo** | https://github.com/Ekam-Bindra/aurora (`main` @ session end: `414193a`) |
+| **Repo** | https://github.com/Ekam-Bindra/aurora — review/merge **`ekam-testing`** first |
 | **Login** | `cfo@nimbus.test` / `aurora-demo-2026` |
-| **Next step** | First AWS deploy → `docs/DEPLOY-CHECKLIST.md` |
+| **Next step** | Merge `ekam-testing` → configure AWS credentials → `docs/DEPLOY-CHECKLIST.md` |
+| **Session log** | `docs/deploy-prep/tasks.md` (both 2026-07-01 sessions, incl. open questions) |
 
 ---
 

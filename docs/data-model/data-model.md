@@ -509,16 +509,20 @@ CREATE TABLE simulation_result (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id      UUID NOT NULL REFERENCES company(id) ON DELETE CASCADE,
     scenario_id     UUID NOT NULL REFERENCES scenario(id) ON DELETE CASCADE,
+    run_id          UUID,                            -- groups one run's per-metric rows (0002)
     metric          TEXT NOT NULL,                   -- metric this distribution describes
     summary         JSONB NOT NULL,                  -- {mean, p5, p50, p95, std, prob_negative}
     distribution    JSONB,                           -- histogram bins / sampled percentiles
     risk_deltas     JSONB,                           -- change in each risk dimension
     recommendations JSONB NOT NULL DEFAULT '[]'::jsonb,
+    driver_sensitivity JSONB,                        -- per-driver attribution for explain (0002)
+    seed            INTEGER,                         -- RNG seed for reproducibility (0002)
     trials          INTEGER NOT NULL,
     model_version   TEXT,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX idx_simresult_scenario ON simulation_result(scenario_id);
+CREATE INDEX idx_simresult_run ON simulation_result(run_id);
 
 CREATE TABLE recommendation (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -562,7 +566,8 @@ CREATE TABLE board_report (
     title           TEXT NOT NULL,
     period_start    DATE,
     period_end      DATE,
-    sections        JSONB NOT NULL DEFAULT '[]'::jsonb, -- ordered section specs + narrated text
+    sections        JSONB NOT NULL DEFAULT '[]'::jsonb, -- ordered section specs
+    content         JSONB,                           -- generated section content (0002)
     status          TEXT NOT NULL DEFAULT 'draft'
                     CHECK (status IN ('draft','in_review','approved','published')),
     export_url      TEXT,                            -- S3 key/signed URL of rendered PDF
@@ -572,6 +577,26 @@ CREATE TABLE board_report (
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX idx_boardreport_company ON board_report(company_id, created_at DESC);
+
+CREATE TABLE ingestion_job (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id      UUID NOT NULL REFERENCES company(id) ON DELETE CASCADE,
+    target          TEXT NOT NULL,                   -- customers | vendors | invoices | expenses
+    source_id       UUID REFERENCES data_source(id) ON DELETE SET NULL,
+    filename        TEXT,
+    status          TEXT NOT NULL DEFAULT 'queued'
+                    CHECK (status IN ('queued','running','completed','failed')),
+    rows_total      INTEGER NOT NULL DEFAULT 0,
+    rows_inserted   INTEGER NOT NULL DEFAULT 0,
+    rows_updated    INTEGER NOT NULL DEFAULT 0,
+    rows_rejected   INTEGER NOT NULL DEFAULT 0,
+    errors          JSONB NOT NULL DEFAULT '[]'::jsonb, -- [{row, issue, action}]
+    lineage_ref     TEXT,                            -- e.g. upload:file.csv#sha256:…
+    started_at      TIMESTAMPTZ,
+    finished_at     TIMESTAMPTZ,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_ingestjob_company ON ingestion_job(company_id);
 ```
 
 > **Note on `audit_log.id`:** the audit log intentionally uses a monotonic `BIGINT IDENTITY`

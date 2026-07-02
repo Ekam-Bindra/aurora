@@ -53,8 +53,11 @@ fi
 
 if command -v aws >/dev/null 2>&1; then
   pass "aws $(aws --version 2>&1 | awk '{print $1}')"
+elif [[ -x "$ROOT/.tools/aws" ]]; then
+  pass "aws ($ROOT/.tools/aws — $("$ROOT/.tools/aws" --version 2>&1 | awk '{print $1}'))"
+  export PATH="$ROOT/.tools:$PATH"
 else
-  fail "aws CLI not found (required for ECR push and Secrets Manager)"
+  fail "aws CLI not found (install v2, or pip-install awscli into .tools — see infra/terraform/README.md)"
 fi
 
 if command -v docker >/dev/null 2>&1; then

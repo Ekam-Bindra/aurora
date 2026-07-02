@@ -81,8 +81,9 @@ def post_scenario(
 def get_scenario_by_id(
     scenario_id: str,
     context: AuthContext = Depends(require_permission(Permission.RUN_SIMULATION)),
+    session: Optional[Session] = Depends(get_db_session),
 ) -> dict:
-    data = get_scenario(scenario_id)
+    data = get_scenario(scenario_id, session=session, company_id=context.tenant_id)
     if data is None or data.get("company_id") != context.tenant_id:
         raise NotFound("Scenario not found")
     return {"data": data, "meta": {"request_id": get_request_id()}}
@@ -91,8 +92,9 @@ def get_scenario_by_id(
 @router.get("/scenarios")
 def list_scenario_items(
     context: AuthContext = Depends(require_permission(Permission.RUN_SIMULATION)),
+    session: Optional[Session] = Depends(get_db_session),
 ) -> dict:
-    items = list_scenarios(context.tenant_id)
+    items = list_scenarios(context.tenant_id, session=session)
     return {"data": items, "meta": {"request_id": get_request_id()}}
 
 
@@ -102,7 +104,7 @@ def post_run_scenario(
     context: AuthContext = Depends(require_permission(Permission.RUN_SIMULATION)),
     session: Session = Depends(_require_db),
 ) -> dict:
-    data = get_scenario(scenario_id)
+    data = get_scenario(scenario_id, session=session, company_id=context.tenant_id)
     if data is None or data.get("company_id") != context.tenant_id:
         raise NotFound("Scenario not found")
     try:
@@ -123,8 +125,9 @@ def post_run_scenario(
 def get_simulation_by_id(
     simulation_id: str,
     context: AuthContext = Depends(require_permission(Permission.RUN_SIMULATION)),
+    session: Optional[Session] = Depends(get_db_session),
 ) -> dict:
-    data = get_simulation(simulation_id)
+    data = get_simulation(simulation_id, session=session, company_id=context.tenant_id)
     if data is None or data.get("company_id") != context.tenant_id:
         raise NotFound("Simulation not found")
     return {"data": data, "meta": {"request_id": get_request_id()}}
@@ -134,9 +137,10 @@ def get_simulation_by_id(
 def explain_simulation_endpoint(
     simulation_id: str,
     context: AuthContext = Depends(require_permission(Permission.RUN_SIMULATION)),
+    session: Optional[Session] = Depends(get_db_session),
 ) -> dict:
-    sim = get_simulation(simulation_id)
+    sim = get_simulation(simulation_id, session=session, company_id=context.tenant_id)
     if sim is None or sim.get("company_id") != context.tenant_id:
         raise NotFound("Simulation not found")
-    data = explain_simulation(simulation_id)
+    data = explain_simulation(simulation_id, session=session, company_id=context.tenant_id)
     return {"data": data, "meta": {"request_id": get_request_id()}}

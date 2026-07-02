@@ -75,6 +75,11 @@ class Unprocessable(AppError):
     code = "unprocessable"
 
 
+class BadGateway(AppError):
+    status_code = 502
+    code = "upstream_error"
+
+
 def _envelope(code: str, message: str, details: Any = None) -> dict:
     return {
         "error": {

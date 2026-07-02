@@ -48,3 +48,15 @@ def test_upgrade_head_then_downgrade_base(tmp_path):
     command.downgrade(cfg, "base")
     after_downgrade = _table_names(url) - {"alembic_version"}
     assert after_downgrade == set()
+
+
+def test_migrate_module_reaches_head_without_checkout(tmp_path):
+    """`python -m aurora_db.migrate` must work from just the installed package
+    (no alembic.ini) — it is the container/one-off-ECS-task migration path."""
+    from aurora_db.migrate import main
+
+    url = f"sqlite:///{tmp_path / 'module.db'}"
+    assert main(["--url", url]) == 0
+    tables = _table_names(url)
+    assert "ingestion_job" in tables  # 0002 artifact
+    assert "alembic_version" in tables

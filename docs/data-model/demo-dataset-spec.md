@@ -188,8 +188,8 @@ layer have ground truth to surface. Each is documented so tests can assert detec
 
 | ID | Anomaly | Where | Magnitude | Should trigger |
 |----|---------|-------|-----------|----------------|
-| **A** | Marketing expense spike | Marketing, month 14 | +180% vs. trend (failed campaign) | Expense anomaly flag; budget-variance alert; explainability attributes the spike |
-| **B** | Revenue dip | Company, month 17 | −22% vs. seasonal expectation (supply disruption) | Forecast residual flag; Operational + Market risk uptick |
+| **A** | Marketing expense spike | Marketing, month 14 | +180% vs. adjacent months (failed campaign) | Expense anomaly flag; budget-variance alert; explainability attributes the spike |
+| **B** | Revenue dip | Company, month 17 | −30% vs. adjacent months (supply disruption) | Forecast residual flag; Operational + Market risk uptick |
 | **C** | Liquidity squeeze | Cash, months 20–24 | runway falls from ~14mo → ~5mo | Liquidity risk → `high`; recommendation to open credit line |
 | **D** | Customer concentration creep | Top customer, months 24–36 | grows 9%→14% of revenue | Customer-Concentration risk rising trend |
 | **E** | Vendor delivery slip | Critical logistics vendor, month 28 | on-time rate drop | Vendor/Supply risk; graph impact analysis |

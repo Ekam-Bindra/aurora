@@ -261,10 +261,9 @@ export default function BoardReportsPage() {
   }, []);
 
   useEffect(() => {
-    if (!selectedId) {
-      setDetail(null);
-      return;
-    }
+    // Selection is never cleared once made, and the detail pane renders only
+    // when the loaded detail matches the selection, so no reset is needed here.
+    if (!selectedId) return;
     getBoardReport(selectedId)
       .then(setDetail)
       .catch((e: Error) => setError(e.message));

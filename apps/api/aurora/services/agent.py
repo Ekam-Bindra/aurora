@@ -10,8 +10,11 @@ from aurora_ml.agent_tools import build_revenue_shock_scenario, search_metrics_c
 from sqlalchemy.orm import Session
 
 from ..core.config import Settings, get_settings
-from ..providers.base import AgentResponse
+from ..core.errors import BadGateway
+from ..providers.anthropic import AnthropicAIProvider
+from ..providers.base import AgentResponse, AIProviderError
 from ..providers.mock import MockAIProvider
+from ..providers.openai import OpenAIProvider
 from .financial import cash_summary, metrics_overview
 from .risk import compute_genome, get_genome
 from .simulation import run_inline_simulation
@@ -25,8 +28,20 @@ def _utcnow() -> str:
 
 
 def _get_provider(settings: Settings):
-    if settings.ai_provider == "mock":
-        return MockAIProvider()
+    """Provider factory. Unknown/unconfigured values are rejected at startup by
+    ``Settings.validate_runtime``; mock remains the keyless default."""
+    if settings.ai_provider == "anthropic":
+        return AnthropicAIProvider(
+            settings.anthropic_api_key,
+            settings.anthropic_model,
+            timeout_seconds=settings.ai_timeout_seconds,
+        )
+    if settings.ai_provider == "openai":
+        return OpenAIProvider(
+            settings.openai_api_key,
+            settings.openai_model,
+            timeout_seconds=settings.ai_timeout_seconds,
+        )
     return MockAIProvider()
 
 
@@ -83,9 +98,12 @@ def send_message(
         ctx["simulation_id"] = sim_id
         ctx["simulation_args"] = sim_args
 
-    response: AgentResponse = provider.complete(
-        message, session_id=sid, context=ctx
-    )
+    try:
+        response: AgentResponse = provider.complete(
+            message, session_id=sid, context=ctx
+        )
+    except AIProviderError as exc:
+        raise BadGateway(f"AI provider error: {exc}") from exc
 
     interaction_id = f"ai_{uuid.uuid4().hex[:12]}"
     record = {

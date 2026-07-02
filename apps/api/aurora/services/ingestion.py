@@ -1,4 +1,10 @@
-"""Ingestion orchestration: file uploads, connector sync, lineage, post-ingestion hooks."""
+"""Ingestion orchestration: file uploads, connector sync, lineage, post-ingestion hooks.
+
+Job status is dual-mode: with a session, jobs persist to the ``ingestion_job``
+table with their final state (visible to every API instance — ECS runs more
+than one task, and a status poll may hit a different task than the upload);
+without one they fall back to the per-process dict used by in-memory tests.
+"""
 
 from __future__ import annotations
 
@@ -13,6 +19,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from aurora_db.models.commercial import Customer, Vendor
 from aurora_db.models.financial import Expense, Invoice
 from aurora_db.models.identity import DataSource
+from aurora_db.models.intelligence import IngestionJob
 from aurora_db.types import new_uuid
 from aurora_ml.marts import refresh_mart
 from sqlalchemy import select
@@ -32,6 +39,56 @@ def _utcnow() -> str:
 
 def _job_id() -> str:
     return f"job_{uuid.uuid4().hex[:12]}"
+
+
+def _parse_iso(value: Optional[str]) -> Optional[datetime]:
+    return datetime.fromisoformat(value) if value else None
+
+
+def _job_row_to_dict(row: IngestionJob) -> Dict[str, Any]:
+    return {
+        "job_id": str(row.id),
+        "company_id": str(row.company_id),
+        "target": row.target,
+        "source_id": str(row.source_id) if row.source_id else None,
+        "filename": row.filename,
+        "status": row.status,
+        "rows_total": row.rows_total,
+        "rows_inserted": row.rows_inserted,
+        "rows_updated": row.rows_updated,
+        "rows_rejected": row.rows_rejected,
+        "errors": list(row.errors or []),
+        "lineage_ref": row.lineage_ref,
+        "started_at": row.started_at.isoformat() if row.started_at else None,
+        "finished_at": row.finished_at.isoformat() if row.finished_at else None,
+        "ws_channel": f"ingestion:{row.id}",
+    }
+
+
+def _persist_job(session: Session, job: Dict[str, Any]) -> None:
+    """Write the job's final state. Called after the pipeline so a failed run can
+    roll back partial data inserts and still record the failed job."""
+    if job.get("status") == "failed":
+        session.rollback()
+    session.add(
+        IngestionJob(
+            id=job["job_id"],
+            company_id=job["company_id"],
+            target=job["target"],
+            source_id=job.get("source_id"),
+            filename=job.get("filename"),
+            status=job["status"],
+            rows_total=job.get("rows_total", 0),
+            rows_inserted=job.get("rows_inserted", 0),
+            rows_updated=job.get("rows_updated", 0),
+            rows_rejected=job.get("rows_rejected", 0),
+            errors=job.get("errors", []),
+            lineage_ref=job.get("lineage_ref"),
+            started_at=_parse_iso(job.get("started_at")),
+            finished_at=_parse_iso(job.get("finished_at")),
+        )
+    )
+    session.flush()
 
 
 def _parse_date(value: Any) -> Optional[date]:
@@ -519,8 +576,9 @@ def _create_job(
     target: str,
     source_id: Optional[str] = None,
     filename: Optional[str] = None,
+    persistent: bool = False,
 ) -> Dict[str, Any]:
-    jid = _job_id()
+    jid = new_uuid() if persistent else _job_id()
     payload = {
         "job_id": jid,
         "company_id": company_id,
@@ -538,15 +596,40 @@ def _create_job(
         "finished_at": None,
         "ws_channel": f"ingestion:{jid}",
     }
-    _jobs[jid] = payload
+    if not persistent:
+        _jobs[jid] = payload
     return payload
 
 
-def get_job(job_id: str) -> Optional[Dict[str, Any]]:
+def get_job(
+    job_id: str,
+    *,
+    session: Optional[Session] = None,
+    company_id: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
+    if session is not None:
+        stmt = select(IngestionJob).where(IngestionJob.id == job_id)
+        if company_id is not None:
+            stmt = stmt.where(IngestionJob.company_id == company_id)
+        row = session.execute(stmt).scalar_one_or_none()
+        return _job_row_to_dict(row) if row is not None else None
     return _jobs.get(job_id)
 
 
-def list_jobs(company_id: str, limit: int = 50) -> List[Dict[str, Any]]:
+def list_jobs(
+    company_id: str,
+    limit: int = 50,
+    *,
+    session: Optional[Session] = None,
+) -> List[Dict[str, Any]]:
+    if session is not None:
+        rows = session.execute(
+            select(IngestionJob)
+            .where(IngestionJob.company_id == company_id)
+            .order_by(IngestionJob.created_at.desc())
+            .limit(limit)
+        ).scalars().all()
+        return [_job_row_to_dict(r) for r in rows]
     items = [j for j in _jobs.values() if j.get("company_id") == company_id]
     items.sort(key=lambda j: j.get("started_at") or "", reverse=True)
     return items[:limit]
@@ -564,7 +647,8 @@ def process_upload(
     if target not in SUPPORTED_TARGETS:
         raise ValueError(f"Unsupported target: {target}")
 
-    job = _create_job(company_id, target=target, filename=filename)
+    persistent = session is not None
+    job = _create_job(company_id, target=target, filename=filename, persistent=persistent)
     job["status"] = "running"
     job["started_at"] = _utcnow()
 
@@ -589,6 +673,8 @@ def process_upload(
         job["errors"] = [{"row": 0, "issue": str(exc), "action": "failed"}]
     finally:
         job["finished_at"] = _utcnow()
+        if persistent:
+            _persist_job(session, job)
 
     return job
 
@@ -609,7 +695,10 @@ def process_connector_sync(
         raise ValueError("Data source has no connector_type configured")
 
     sync_target = target or (ds.config or {}).get("default_target", "invoices")
-    job = _create_job(company_id, target=sync_target, source_id=source_id)
+    persistent = session is not None
+    job = _create_job(
+        company_id, target=sync_target, source_id=source_id, persistent=persistent
+    )
     job["status"] = "running"
     job["started_at"] = _utcnow()
     ds.status = "syncing"
@@ -635,10 +724,20 @@ def process_connector_sync(
         job.update(result)
         job["status"] = "completed"
     except Exception as exc:
-        ds.status = "error"
         job["status"] = "failed"
         job["errors"] = [{"row": 0, "issue": str(exc), "action": "failed"}]
     finally:
         job["finished_at"] = _utcnow()
+        if persistent:
+            _persist_job(session, job)
+            if job["status"] == "failed":
+                # _persist_job rolled the session back, discarding the pre-failure
+                # ds.status="syncing" write; re-mark the source as errored.
+                ds = get_data_source(session, company_id, source_id)
+                if ds is not None:
+                    ds.status = "error"
+                    session.flush()
+        elif job["status"] == "failed":
+            ds.status = "error"
 
     return job
