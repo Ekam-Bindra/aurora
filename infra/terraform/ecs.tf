@@ -115,7 +115,8 @@ resource "aws_ecs_task_definition" "api" {
       { name = "APP_ENV", value = var.environment == "production" ? "production" : "staging" },
       { name = "LOG_LEVEL", value = "info" },
       { name = "SEED_DEMO_ON_STARTUP", value = "false" },
-      { name = "CORS_ORIGINS", value = join(",", var.cors_origins) },
+      # JSON so pydantic-settings list parsing accepts it on any version.
+      { name = "CORS_ORIGINS", value = jsonencode(var.cors_origins) },
       { name = "ANALYTICS_BACKEND", value = "postgres" },
       { name = "S3_BUCKET", value = var.enable_s3_uploads ? aws_s3_bucket.uploads[0].id : "" },
       { name = "S3_REGION", value = var.aws_region },

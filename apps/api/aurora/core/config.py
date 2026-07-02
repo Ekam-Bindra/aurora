@@ -6,11 +6,13 @@ production if insecure placeholder values are left in place.
 
 from __future__ import annotations
 
+import json
 from functools import lru_cache
 from typing import List, Optional, Union
 
 from pydantic import field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
+from typing_extensions import Annotated
 
 from .oidc import OidcConfig, parse_oidc_config
 
@@ -39,7 +41,12 @@ class Settings(BaseSettings):
     project_name: str = "AURORA API"
     version: str = "0.1.0"
     api_v1_prefix: str = "/api/v1"
-    cors_origins: List[str] = ["http://localhost:3000", "http://localhost"]
+    # NoDecode: pydantic-settings would otherwise require strict JSON for list
+    # fields read from the environment and crash on the comma form.
+    cors_origins: Annotated[List[str], NoDecode] = [
+        "http://localhost:3000",
+        "http://localhost",
+    ]
 
     # Datastores. When ``database_url`` is set the API uses ``aurora_db`` (Phase 2).
     database_url: Optional[str] = None
@@ -85,8 +92,12 @@ class Settings(BaseSettings):
     @field_validator("cors_origins", mode="before")
     @classmethod
     def parse_cors_origins(cls, value: Union[str, List[str]]) -> List[str]:
+        """Accept a JSON array (Terraform/ECS) or a comma-separated string (.env)."""
         if isinstance(value, str):
-            return [origin.strip() for origin in value.split(",") if origin.strip()]
+            text = value.strip()
+            if text.startswith("["):
+                return json.loads(text)
+            return [origin.strip() for origin in text.split(",") if origin.strip()]
         return value
 
     @field_validator("analytics_backend")
