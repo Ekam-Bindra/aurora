@@ -71,7 +71,15 @@ remaining list + continuing development. Outcomes:
 | S2-11 | ADR §12 gap | ✅ no change needed | Section exists in `system-architecture.md:557` — session 1's doc-sweep claim was wrong |
 | S2-12 | k6 load test run | ⏭️ flagged | k6 executes, but ~50–85% connection-level failures **specific to k6 on this machine**; API exonerated: 300/300 concurrent curl requests 200 OK, k6's own p95 latency 81ms on successful requests, zero non-200s in API logs. Rerun k6 against staging post-deploy |
 
-## Blocked / not-executed items (carried to final report)
+## Session 3 (2026-07-01, same day) — "instructions for me, keep working"
+
+| # | Task | Status | Outcome notes |
+|---|------|--------|---------------|
+| S3-1 | Step-by-step user action guide | ✅ | [`USER-ACTIONS.md`](USER-ACTIONS.md) — merge, AWS credentials, optional Docker, GitHub secrets, first deploy, AI key; each step with verification |
+| S3-2 | GitHub OIDC bootstrap script | ✅ | `scripts/setup-aws-oidc.sh` — idempotent; creates provider + least-privilege deploy role (ECR push, ECS redeploy) and prints `AWS_ROLE_ARN` |
+| S3-3 | CI: web lint + typecheck steps, new E2E job | ✅ | Per `docs/E2E.md` CI notes; failure traces uploaded as artifacts |
+| S3-4 | Real AI providers (Anthropic + OpenAI) | ✅ | httpx adapters, grounded system prompt from tool context, evidence-trail parity with mock, `AIProviderError` → 502 envelope, startup key validation, 12 MockTransport tests; `AI_PROVIDER=mock` still default; bedrock explicitly rejected at boot |
+| S3-5 | `set-state-in-effect` refactor (8 sites) | ✅ | Redundant draft-mirroring effect deleted (render already falls back); dead null-reset branches removed (render guards by id); load-on-param-change effects schedule state updates into promise callbacks. Rule restored to **error**; lint fully clean |
 
 | Item | Why | Owner action |
 |------|-----|--------------|

@@ -99,8 +99,8 @@ Phases 1–3 landed on `main` before numbered PR workflow (commits `9ad7c61`, `2
 | Done 2026-07-01 | ~~Dependabot PRs #12–#14 + new eslint-10/react-19 PRs~~ | All five closed: ts 6 / next 16 / tailwind 4 / react 19 applied+tested on `ekam-testing`; **eslint 10 rejected** (eslint-plugin-react caps at 9 — retry when eslint-config-next updates) |
 | Done 2026-07-01 | ~~Branch cleanup~~ | 12 merged `feat/*` + 5 dependabot branches deleted locally and on origin |
 | Follow-up | k6 against staging | Local k6 run has machine-specific connection failures (API exonerated — see `docs/deploy-prep/tasks.md` S2-12); run `BASE_URL=<alb> ./scripts/load-test.sh` post-deploy |
-| Follow-up | 8 `set-state-in-effect` lint warnings | Pre-existing fetch-on-mount patterns flagged by eslint-config-next 16's new rule; refactor to event-driven loading when convenient |
-| Future | Real AI provider | Swap `AI_PROVIDER=mock` for OpenAI/Anthropic when keys available (user to supply key + provider choice) |
+| Done 2026-07-01 | ~~8 `set-state-in-effect` lint warnings~~ | Refactored (session 3); rule enforced at error level, lint fully clean |
+| Done 2026-07-01 | ~~Real AI provider (code)~~ | Anthropic + OpenAI adapters implemented + unit-tested (session 3); **user supplies a key** (`ANTHROPIC_API_KEY` or `OPENAI_API_KEY` + `AI_PROVIDER=...`) to activate; mock stays default; bedrock still unimplemented |
 | Future | Redis job queues | Async workers for long simulations/report renders; DB-backed state (above) already covers multi-task correctness |
 
 ---
@@ -261,6 +261,7 @@ Breakdown by package: api 78 · database 17 · ml 10 · graph 2 · simulations 6
 
 | Date | Update |
 |------|--------|
+| 2026-07-01 | **Session 3 (`ekam-testing`):** `docs/deploy-prep/USER-ACTIONS.md` step-by-step user guide + `scripts/setup-aws-oidc.sh` (OIDC provider + least-privilege deploy role); CI gains web lint/typecheck + Playwright E2E job; real Anthropic/OpenAI agent providers (httpx, 12 unit tests, 502 error envelope, boot-time key validation — mock stays default until user supplies a key); all 8 `set-state-in-effect` sites refactored and the rule enforced at error |
 | 2026-07-01 | **Session 2 (`ekam-testing`):** persisted board reports / ingestion jobs / simulation runs to DB (migration `0002`, 120 pytest green) resolving the `desired_count=2` risk; Alembic-at-startup for file-backed SQLite (stale dev DBs self-heal — found via real E2E failure); react 19.2 bump gated green; ESLint 9 flat-config migration (`next lint` removed in 16; eslint 10 rejected — plugin incompat); aws CLI v1 + k6 installed into `.tools` with script fallbacks; 12 `feat/*` + 5 dependabot branches deleted on origin (PRs #12–#14 + eslint-10 + react-19 closed as superseded); k6-local flagged machine-specific (API exonerated 300/300); Docker + AWS credentials + GitHub secrets remain user-only |
 | 2026-07-01 | **Session 1 — deploy-prep (`ekam-testing`):** fixed date-rollover seed bug (anomalies A/B now pinned vs neighbor months — suite was red since the July rollover; CI on `main` red until merged); bumped typescript 6.0.3 / next 16.2.x / tailwindcss 4.3.1 with build+E2E gates (Tailwind 4 PostCSS migration included); Dependabot PRs #12–#14 superseded (stale branches — do not merge); deploy preflight run (only FAILs = missing `aws`/`docker` CLIs); README + web README synced to merged reality; local merged `feat/*` branches deleted; session docs under `docs/deploy-prep/` incl. open questions Q-1…Q-7; 116 pytest + 4 E2E green |
 | 2026-06-29 | **Session end:** comprehensive handoff; P1–P9 + PRs #15–#17 complete; deploy checklist ready; 116 pytest + 4 E2E |
