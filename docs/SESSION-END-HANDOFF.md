@@ -1,19 +1,23 @@
 # AURORA — Start Here Tomorrow
 
-> **Session ended:** 2026-07-01 · All work on **`ekam-testing`** (14 commits) — `main` untouched at `d93d291` and its CI is **red** until the seed fix merges.
+> **Session ended:** 2026-07-02 · **STAGING IS LIVE ON AWS.** PRs #20–#22 merged; CI 8/8 green.
 
 ---
 
 ## 30-second status
 
-AURORA is a **complete MVP through Phase 9**, now hardened for multi-instance deploys: board reports, ingestion jobs, and simulation runs persist to the database (migration `0002`), the web stack is on next 16 / react 19 / typescript 6 / tailwind 4 / eslint 9 (all build+E2E gated), and **120 pytest + 4 E2E tests are green on `ekam-testing`**. First AWS deploy still pending — user-only inputs: AWS credentials, Docker (optional if deploying via GitHub Actions), GitHub secrets.
+AURORA runs on AWS staging: ECS Fargate (2×api, 2×web) behind an ALB, RDS Postgres
+(migrated to Alembic head, Nimbus seeded + verified), images built by the GitHub-Actions
+Deploy workflow via an OIDC role. All persistence is database-backed, the web stack is
+next 16 / react 19 / ts 6 / tailwind 4 / eslint 9, and real Anthropic/OpenAI agent
+providers are implemented (mock active until a key is supplied). **138 pytest + 4 E2E green.**
 
 | | |
 |---|---|
-| **Repo** | https://github.com/Ekam-Bindra/aurora — review/merge **`ekam-testing`** first |
-| **Login** | `cfo@nimbus.test` / `aurora-demo-2026` |
-| **Next step** | Merge `ekam-testing` → configure AWS credentials → `docs/DEPLOY-CHECKLIST.md` |
-| **Session log** | `docs/deploy-prep/tasks.md` (both 2026-07-01 sessions, incl. open questions) |
+| **Staging** | http://aurora-staging-959198614.us-east-1.elb.amazonaws.com · `cfo@nimbus.test` / `aurora-demo-2026` |
+| **Deploys** | GitHub → Actions → Deploy (staging · latest) — no local Docker needed |
+| **Costs** | RDS micro + ALB + NAT + Fargate ≈ $2–5/day — `terraform destroy` in `infra/terraform` to stop |
+| **Next** | AI provider key · custom domain + ACM for HTTPS · production environment |
 
 ---
 

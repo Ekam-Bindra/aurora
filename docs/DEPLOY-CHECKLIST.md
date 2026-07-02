@@ -98,23 +98,31 @@ Or trigger `.github/workflows/deploy.yml` after configuring GitHub secrets (Step
 
 ## Step 4 — Database migrate (and optional seed)
 
-Retrieve database URL from Secrets Manager:
+RDS is **not publicly accessible**, so run migrations as a one-off ECS task inside the VPC
+using the API image (it has `aurora_db` + psycopg installed, and the task definition injects
+`DATABASE_URL` from Secrets Manager). Grab the API service's network configuration first:
 
 ```bash
-SECRET_ARN=$(terraform output -raw database_secret_arn)
-DATABASE_URL=$(aws secretsmanager get-secret-value \
-  --secret-id "$SECRET_ARN" \
-  --query SecretString --output text)
+NETCONF=$(aws ecs describe-services --cluster aurora-staging --services aurora-staging-api \
+  --query "services[0].networkConfiguration" --output json)
 
-pip install -e packages/database
-alembic -x url="$DATABASE_URL" upgrade head
+aws ecs run-task --cluster aurora-staging --task-definition aurora-staging-api \
+  --launch-type FARGATE --network-configuration "$NETCONF" \
+  --overrides '{"containerOverrides":[{"name":"api","command":["python","-m","aurora_db.migrate"]}]}'
 ```
 
-Optional demo tenant (**staging only**):
+Wait for the task to stop and confirm `exitCode: 0` (`aws ecs describe-tasks`).
+
+Optional demo tenant (**staging only**) — same pattern:
 
 ```bash
-python -m aurora_db.seed --demo nimbus --verify --url "$DATABASE_URL" --scale 0.1
+aws ecs run-task --cluster aurora-staging --task-definition aurora-staging-api \
+  --launch-type FARGATE --network-configuration "$NETCONF" \
+  --overrides '{"containerOverrides":[{"name":"api","command":["python","-m","aurora_db.seed","--demo","nimbus","--verify","--scale","0.1"]}]}'
 ```
+
+(From a machine inside the VPC — or if you flip the DB to publicly accessible — the direct
+form still works: `alembic -x url="$DATABASE_URL" upgrade head` from `packages/database`.)
 
 Demo login: `cfo@nimbus.test` / `aurora-demo-2026`
 
