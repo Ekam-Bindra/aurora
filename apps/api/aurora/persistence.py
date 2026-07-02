@@ -48,18 +48,10 @@ def _upgrade_sqlite_schema(url: str) -> None:
     (e.g. 0002's ``board_report.content``) never reach long-lived local files
     like ``data/aurora_e2e.db`` without running real migrations.
     """
-    from argparse import Namespace
-
-    import aurora_db
     from alembic import command
-    from alembic.config import Config
+    from aurora_db.migrate import build_config
 
-    cfg = Config(cmd_opts=Namespace(x=[f"url={url}"]))
-    cfg.set_main_option(
-        "script_location",
-        str(Path(aurora_db.__file__).resolve().parent / "migrations"),
-    )
-    command.upgrade(cfg, "head")
+    command.upgrade(build_config(url), "head")
 
 
 def init_database(url: str, *, create_tables: bool = False) -> None:

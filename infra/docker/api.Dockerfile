@@ -10,7 +10,9 @@ WORKDIR /app
 # Install monorepo packages (database, ml, graph, simulations, analytics, api).
 COPY packages/database/pyproject.toml packages/database/README.md /tmp/database/
 COPY packages/database/aurora_db /tmp/database/aurora_db
-RUN pip install --upgrade pip && pip install /tmp/database
+# [postgres] extra pulls psycopg — required to reach RDS; without it the
+# container only speaks SQLite.
+RUN pip install --upgrade pip && pip install "/tmp/database[postgres]"
 
 COPY packages/ml/pyproject.toml packages/ml/README.md /tmp/ml/
 COPY packages/ml/aurora_ml /tmp/ml/aurora_ml
