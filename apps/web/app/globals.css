@@ -1,6 +1,7 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+/* Tailwind 4 no longer auto-loads the JS config; keep the shared
+   @aurora/config preset (design tokens) via the legacy-config bridge. */
+@config "../tailwind.config.js";
 
 :root {
   color-scheme: dark;
