@@ -13,7 +13,7 @@
     "test:e2e:install": "playwright install chromium"
   },
   "dependencies": {
-    "@xyflow/react": "^12.3.6",
+    "@xyflow/react": "^12.11.2",
     "next": "^16.2.9",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
