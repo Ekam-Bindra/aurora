@@ -180,10 +180,58 @@ def test_failed_upload_job_is_persisted(db_url):
         assert r.json()["data"]["errors"]
 
 
+def test_agent_chat_history_survives_process_restart(db_url):
+    with _make_client(db_url, seed=True) as client_a:
+        token = _login(client_a)
+        r = client_a.post(
+            "/api/v1/agent/messages",
+            json={"message": "What is our cash runway?"},
+            headers=_auth(token),
+        )
+        assert r.status_code == 200, r.text
+        body = r.json()["data"]
+        session_id = body["session_id"]
+        assert body["answer"]
+
+        r = client_a.post(
+            "/api/v1/agent/messages",
+            json={"message": "And our top risks?", "session_id": session_id},
+            headers=_auth(token),
+        )
+        assert r.status_code == 200, r.text
+
+    with _make_client(db_url, seed=False) as client_b:
+        token = _login(client_b)
+
+        r = client_b.get("/api/v1/agent/sessions", headers=_auth(token))
+        assert r.status_code == 200, r.text
+        sessions = r.json()["data"]
+        assert any(
+            s["id"] == session_id and s["message_count"] == 2 for s in sessions
+        ), sessions
+
+        r = client_b.get(f"/api/v1/agent/sessions/{session_id}", headers=_auth(token))
+        assert r.status_code == 200, r.text
+        messages = r.json()["data"]["messages"]
+        assert [m["question"] for m in messages] == [
+            "What is our cash runway?",
+            "And our top risks?",
+        ]
+        assert all(m["answer"] for m in messages)
+        assert all(m["provider"] == "mock" for m in messages)
+
+
 def test_persisted_stores_are_tenant_scoped(db_url):
     with _make_client(db_url, seed=True) as client:
         token = _login(client)
         report_id, job_id, scenario_id, simulation_id = _create_artifacts(client, token)
+        r = client.post(
+            "/api/v1/agent/messages",
+            json={"message": "runway?"},
+            headers=_auth(token),
+        )
+        assert r.status_code == 200
+        agent_session_id = r.json()["data"]["session_id"]
 
         settings = get_settings()
         intruder = create_token(
@@ -202,6 +250,7 @@ def test_persisted_stores_are_tenant_scoped(db_url):
             f"/api/v1/ingestion/jobs/{job_id}",
             f"/api/v1/scenarios/{scenario_id}",
             f"/api/v1/simulations/{simulation_id}",
+            f"/api/v1/agent/sessions/{agent_session_id}",
         ):
             r = client.get(url, headers=_auth(intruder))
             assert r.status_code == 404, f"{url} leaked across tenants: {r.status_code}"
