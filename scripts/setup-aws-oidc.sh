@@ -95,6 +95,12 @@ PERM_DOC="$(cat <<JSON
       "Resource": "arn:aws:ecr:*:${ACCOUNT_ID}:repository/aurora-*"
     },
     {
+      "Sid": "AlbHealthGate",
+      "Effect": "Allow",
+      "Action": "elasticloadbalancing:DescribeLoadBalancers",
+      "Resource": "*"
+    },
+    {
       "Sid": "EcsRedeploy",
       "Effect": "Allow",
       "Action": [

@@ -1,12 +1,22 @@
-"""Executive AI agent service — mock provider + tool orchestration."""
+"""Executive AI agent service — provider orchestration + tool assembly.
+
+Interaction storage is dual-mode: with a session, Q&A rounds persist to the
+``ai_interaction`` table (chat history survives restarts and spans the two
+ECS API tasks); without one the per-process dicts back the in-memory test
+mode. A "chat session" is the group of interactions sharing a ``session_id``.
+"""
 
 from __future__ import annotations
 
+import time
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
+from aurora_db.models.intelligence import AIInteraction
+from aurora_db.types import new_uuid
 from aurora_ml.agent_tools import build_revenue_shock_scenario, search_metrics_context
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ..core.config import Settings, get_settings
@@ -45,6 +55,23 @@ def _get_provider(settings: Settings):
     return MockAIProvider()
 
 
+def _interaction_row_to_dict(row: AIInteraction) -> Dict[str, Any]:
+    return {
+        "id": str(row.id),
+        "session_id": str(row.session_id) if row.session_id else None,
+        "company_id": str(row.company_id),
+        "user_id": str(row.user_id) if row.user_id else None,
+        "question": row.question,
+        "answer": row.answer,
+        "tools_used": list(row.tools_used or []),
+        "citations": list(row.citations or []),
+        "provider": row.provider,
+        "model": row.model,
+        "tokens": {"input": row.tokens_input or 0, "output": row.tokens_output or 0},
+        "created_at": row.created_at.isoformat() if row.created_at else None,
+    }
+
+
 def send_message(
     session: Session,
     company_id: str,
@@ -56,8 +83,12 @@ def send_message(
     settings = get_settings()
     provider = _get_provider(settings)
 
-    sid = session_id or f"se_{uuid.uuid4().hex[:12]}"
-    if sid not in _sessions:
+    persistent = session is not None
+    if persistent:
+        sid = session_id or new_uuid()
+    else:
+        sid = session_id or f"se_{uuid.uuid4().hex[:12]}"
+    if not persistent and sid not in _sessions:
         _sessions[sid] = {
             "id": sid,
             "company_id": company_id,
@@ -98,30 +129,52 @@ def send_message(
         ctx["simulation_id"] = sim_id
         ctx["simulation_args"] = sim_args
 
+    started = time.monotonic()
     try:
         response: AgentResponse = provider.complete(
             message, session_id=sid, context=ctx
         )
     except AIProviderError as exc:
         raise BadGateway(f"AI provider error: {exc}") from exc
+    latency_ms = int((time.monotonic() - started) * 1000)
 
-    interaction_id = f"ai_{uuid.uuid4().hex[:12]}"
-    record = {
-        "id": interaction_id,
-        "session_id": sid,
-        "company_id": company_id,
-        "user_id": user_id,
-        "question": message,
-        "answer": response.answer,
-        "tools_used": response.tools_used,
-        "citations": response.citations,
-        "provider": response.provider,
-        "model": response.model,
-        "tokens": {"input": response.tokens_input, "output": response.tokens_output},
-        "created_at": _utcnow(),
-    }
-    _interactions[interaction_id] = record
-    _sessions[sid]["messages"].append(record)
+    if persistent:
+        row = AIInteraction(
+            id=new_uuid(),
+            company_id=company_id,
+            user_id=user_id,
+            session_id=sid,
+            question=message,
+            answer=response.answer,
+            tools_used=response.tools_used or [],
+            citations=response.citations or [],
+            provider=response.provider,
+            model=response.model,
+            tokens_input=response.tokens_input,
+            tokens_output=response.tokens_output,
+            latency_ms=latency_ms,
+        )
+        session.add(row)
+        session.flush()
+        interaction_id = str(row.id)
+    else:
+        interaction_id = f"ai_{uuid.uuid4().hex[:12]}"
+        record = {
+            "id": interaction_id,
+            "session_id": sid,
+            "company_id": company_id,
+            "user_id": user_id,
+            "question": message,
+            "answer": response.answer,
+            "tools_used": response.tools_used,
+            "citations": response.citations,
+            "provider": response.provider,
+            "model": response.model,
+            "tokens": {"input": response.tokens_input, "output": response.tokens_output},
+            "created_at": _utcnow(),
+        }
+        _interactions[interaction_id] = record
+        _sessions[sid]["messages"].append(record)
 
     return {
         "session_id": sid,
@@ -135,7 +188,28 @@ def send_message(
     }
 
 
-def get_session(session_id: str, company_id: str) -> Optional[Dict[str, Any]]:
+def get_session(
+    session_id: str,
+    company_id: str,
+    *,
+    session: Optional[Session] = None,
+) -> Optional[Dict[str, Any]]:
+    if session is not None:
+        rows = session.execute(
+            select(AIInteraction)
+            .where(
+                AIInteraction.company_id == company_id,
+                AIInteraction.session_id == session_id,
+            )
+            .order_by(AIInteraction.created_at)
+        ).scalars().all()
+        if not rows:
+            return None
+        return {
+            "id": session_id,
+            "messages": [_interaction_row_to_dict(r) for r in rows],
+            "created_at": rows[0].created_at.isoformat() if rows[0].created_at else None,
+        }
     sess = _sessions.get(session_id)
     if sess is None or sess.get("company_id") != company_id:
         return None
@@ -146,7 +220,37 @@ def get_session(session_id: str, company_id: str) -> Optional[Dict[str, Any]]:
     }
 
 
-def list_sessions(company_id: str, user_id: Optional[str] = None) -> List[Dict[str, Any]]:
+def list_sessions(
+    company_id: str,
+    user_id: Optional[str] = None,
+    *,
+    session: Optional[Session] = None,
+) -> List[Dict[str, Any]]:
+    if session is not None:
+        stmt = (
+            select(
+                AIInteraction.session_id,
+                func.min(AIInteraction.created_at).label("created_at"),
+                func.count().label("message_count"),
+            )
+            .where(
+                AIInteraction.company_id == company_id,
+                AIInteraction.session_id.isnot(None),
+            )
+            .group_by(AIInteraction.session_id)
+            .order_by(func.min(AIInteraction.created_at).desc())
+        )
+        if user_id:
+            stmt = stmt.where(AIInteraction.user_id == user_id)
+        rows = session.execute(stmt).all()
+        return [
+            {
+                "id": str(sid),
+                "created_at": created.isoformat() if created else None,
+                "message_count": count,
+            }
+            for sid, created, count in rows
+        ]
     out = []
     for sess in _sessions.values():
         if sess.get("company_id") != company_id:

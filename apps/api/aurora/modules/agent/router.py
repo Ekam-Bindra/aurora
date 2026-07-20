@@ -51,8 +51,9 @@ def post_agent_message(
 def get_agent_session(
     session_id: str,
     context: AuthContext = Depends(require_permission(Permission.USE_AI_AGENT)),
+    session: Optional[Session] = Depends(get_db_session),
 ) -> dict:
-    data = get_session(session_id, context.tenant_id)
+    data = get_session(session_id, context.tenant_id, session=session)
     if data is None:
         raise NotFound("Session not found")
     return {"data": data, "meta": {"request_id": get_request_id()}}
@@ -61,6 +62,7 @@ def get_agent_session(
 @router.get("/agent/sessions")
 def list_agent_sessions(
     context: AuthContext = Depends(require_permission(Permission.USE_AI_AGENT)),
+    session: Optional[Session] = Depends(get_db_session),
 ) -> dict:
-    items = list_sessions(context.tenant_id, user_id=context.user_id)
+    items = list_sessions(context.tenant_id, user_id=context.user_id, session=session)
     return {"data": items, "meta": {"request_id": get_request_id()}}
