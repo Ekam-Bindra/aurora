@@ -1,14 +1,19 @@
 # Build API + web images, push to ECR, and force ECS redeployment.
-# Does NOT run Terraform or Alembic migrations — see docs/DEPLOY-CHECKLIST.md.
+# Does NOT run Terraform or Alembic migrations — see docs/DEPLOY-CHECKLIST.md
+# (migrations: one-off ECS task running `python -m aurora_db.migrate`).
+#
+# Triggers:
+#   - push to main  → automatic staging deploy (continuous delivery)
+#   - workflow_dispatch → choose environment (production deploys are manual-only)
 #
 # Required repository secrets:
 #   AWS_ROLE_ARN  — IAM role ARN trusted by GitHub OIDC for ECR + ECS
 #   AWS_REGION    — optional; defaults to us-east-1
-#
-# Required GitHub environments: staging, production (match workflow_dispatch input)
 name: deploy
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       environment:
@@ -28,15 +33,21 @@ permissions:
   id-token: write
   contents: read
 
+concurrency:
+  group: deploy-${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'staging' }}
+  cancel-in-progress: false
+
 env:
   AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
   PROJECT_NAME: aurora
+  TARGET_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'staging' }}
+  IMAGE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.image_tag || 'latest' }}
 
 jobs:
   deploy:
-    name: Deploy to ${{ inputs.environment }}
+    name: Deploy to ${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'staging' }}
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
+    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'staging' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -53,46 +64,62 @@ jobs:
       - name: Build and push API image
         env:
           ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
-          IMAGE_TAG: ${{ inputs.image_tag }}
         run: |
-          docker build -f infra/docker/api.Dockerfile -t $ECR_REGISTRY/${{ env.PROJECT_NAME }}-api:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/${{ env.PROJECT_NAME }}-api:$IMAGE_TAG
+          docker build -f infra/docker/api.Dockerfile \
+            -t $ECR_REGISTRY/${{ env.PROJECT_NAME }}-api:$IMAGE_TAG \
+            -t $ECR_REGISTRY/${{ env.PROJECT_NAME }}-api:sha-${GITHUB_SHA::7} .
+          docker push --all-tags $ECR_REGISTRY/${{ env.PROJECT_NAME }}-api
 
       - name: Build and push web image
         env:
           ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
-          IMAGE_TAG: ${{ inputs.image_tag }}
         run: |
-          docker build -f infra/docker/web.Dockerfile -t $ECR_REGISTRY/${{ env.PROJECT_NAME }}-web:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/${{ env.PROJECT_NAME }}-web:$IMAGE_TAG
+          docker build -f infra/docker/web.Dockerfile \
+            -t $ECR_REGISTRY/${{ env.PROJECT_NAME }}-web:$IMAGE_TAG \
+            -t $ECR_REGISTRY/${{ env.PROJECT_NAME }}-web:sha-${GITHUB_SHA::7} .
+          docker push --all-tags $ECR_REGISTRY/${{ env.PROJECT_NAME }}-web
 
       - name: Force ECS service redeployment
         env:
-          CLUSTER: ${{ env.PROJECT_NAME }}-${{ inputs.environment }}
-          IMAGE_TAG: ${{ inputs.image_tag }}
+          CLUSTER: ${{ env.PROJECT_NAME }}-${{ env.TARGET_ENV }}
         run: |
           for SERVICE in api web; do
             aws ecs update-service \
               --cluster "$CLUSTER" \
-              --service "${{ env.PROJECT_NAME }}-${{ inputs.environment }}-${SERVICE}" \
+              --service "${{ env.PROJECT_NAME }}-${{ env.TARGET_ENV }}-${SERVICE}" \
               --force-new-deployment \
               --no-cli-pager
             aws ecs wait services-stable \
               --cluster "$CLUSTER" \
-              --services "${{ env.PROJECT_NAME }}-${{ inputs.environment }}-${SERVICE}" \
+              --services "${{ env.PROJECT_NAME }}-${{ env.TARGET_ENV }}-${SERVICE}" \
               || echo "Warning: ${SERVICE} did not reach stable within wait timeout"
           done
-          echo "Deployed tag ${IMAGE_TAG} to ${CLUSTER}"
+          echo "Deployed tag ${IMAGE_TAG} (sha-${GITHUB_SHA::7}) to ${CLUSTER}"
+
+      - name: Post-deploy health gate
+        run: |
+          ALB=$(aws elbv2 describe-load-balancers \
+            --names "${{ env.PROJECT_NAME }}-${{ env.TARGET_ENV }}" \
+            --query "LoadBalancers[0].DNSName" --output text)
+          echo "Probing http://${ALB}/api/v1/health"
+          for i in $(seq 1 20); do
+            if curl -sf "http://${ALB}/api/v1/health" | grep -q '"status"'; then
+              echo "Health gate passed."
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "Health gate FAILED after 5 minutes." >&2
+          exit 1
 
       - name: Deployment summary
         run: |
           echo "## Deploy complete" >> $GITHUB_STEP_SUMMARY
-          echo "- Environment: ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Image tag: ${{ inputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Environment: ${{ env.TARGET_ENV }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Image tag: ${{ env.IMAGE_TAG }} (also sha-${GITHUB_SHA::7})" >> $GITHUB_STEP_SUMMARY
           echo "- Region: ${{ env.AWS_REGION }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Cluster: ${{ env.PROJECT_NAME }}-${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Cluster: ${{ env.PROJECT_NAME }}-${{ env.TARGET_ENV }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Post-deploy" >> $GITHUB_STEP_SUMMARY
-          echo "1. Run Alembic migrations if schema changed (\`docs/DEPLOY-CHECKLIST.md\` Step 4)." >> $GITHUB_STEP_SUMMARY
-          echo "2. Smoke test: \`BASE_URL=https://<alb>/api/v1 ./scripts/load-test.sh\`" >> $GITHUB_STEP_SUMMARY
-          echo "3. Preflight locally: \`./scripts/deploy-check.sh\`" >> $GITHUB_STEP_SUMMARY
+          echo "1. Run Alembic migrations if schema changed: one-off ECS task \`python -m aurora_db.migrate\` (docs/DEPLOY-CHECKLIST.md Step 4)." >> $GITHUB_STEP_SUMMARY
+          echo "2. Load smoke: \`BASE_URL=http://<alb>/api/v1 ./scripts/load-test.sh\`" >> $GITHUB_STEP_SUMMARY
