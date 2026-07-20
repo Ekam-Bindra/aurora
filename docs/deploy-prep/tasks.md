@@ -90,3 +90,14 @@ remaining list + continuing development. Outcomes:
 | Real AI provider | No API keys; only `mock` implemented | Q-7 |
 | Persistent queues / board-report DB wiring | Marked "Future"; production-correctness decision needed (design.md §5.1) | Q-6 |
 | Remote `feat/*` branch deletion | Outward-facing destructive action | Q-5 |
+
+## Session 5 (2026-07-02) — "continue as a FAANG team would"
+
+| # | Task | Status | Outcome notes |
+|---|------|--------|---------------|
+| S5-1 | Master engineering prompt | ✅ | [`../MASTER-PROMPT.md`](../MASTER-PROMPT.md): verified state, hard-won correctness facts, standards, ranked epic backlog E1–E5, open product-owner questions |
+| S5-2 | Agent chat persistence | ✅ | Last in-memory store gone: interactions → `ai_interaction` (incl. `latency_ms`), sessions = grouped interactions; cross-instance + tenant-isolation tests |
+| S5-3 | k6 vs staging | ✅ | First run exposed login-per-iteration tripping the auth rate limiter (feature, not bug) — smoke.js now logs in once in `setup()`; result: **965/965 checks, 0% failures, p95 35.6ms** |
+| S5-4 | Continuous delivery | ✅ | Push-to-main auto-deploys staging (production stays manual); immutable `sha-` image tags; concurrency guard; post-deploy ALB health gate (deploy role gained `elbv2:DescribeLoadBalancers`) |
+| S5-5 | Branch protection | 🚫 user decision | GitHub Free + private repo → 403 "Upgrade to GitHub Pro or make this repository public". HIGH PRIORITY governance gap |
+| S5-6 | CloudWatch alarms | ✅ | 9 alarms (ALB 5xx / p95 latency / unhealthy hosts ×2, ECS CPU ×2, RDS CPU/storage/connections) → SNS email; **user must click the AWS subscription-confirmation email** |

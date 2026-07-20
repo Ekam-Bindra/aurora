@@ -87,3 +87,9 @@ variable "certificate_arn" {
   type        = string
   default     = ""
 }
+
+variable "alert_email" {
+  description = "Email address for CloudWatch alarm notifications (empty disables the SNS topic)."
+  type        = string
+  default     = ""
+}
