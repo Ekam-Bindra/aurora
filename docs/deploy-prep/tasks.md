@@ -115,3 +115,15 @@ remaining list + continuing development. Outcomes:
 | S6-6 | Dependabot batch (#27–#31) | ✅ | All five were within-range lockfile bumps; applied + gated; PRs closed as superseded |
 | S6-7 | Governance files | ✅ | PR template with standards checklist, CODEOWNERS |
 | S6-8 | IAM deployer scoping | ⏭️ flagged | Deferred — apply-time lockout risk needs a careful, tested policy; runbook documents the manual rotation meanwhile |
+
+## Session 7 (2026-07-20, same day) — "subagents, owner-tasks aside, stop the emails"
+
+| # | Task | Status | Outcome notes |
+|---|------|--------|---------------|
+| S7-1 | Stop notification spam | ✅ | GitHub repo subscription set to **ignored** for the owner (zero repo emails; revert via Watch menu); SNS confirmation deliberately NOT re-sent |
+| S7-2 | Owner action list | ✅ | MASTER-PROMPT §4 rewritten as the single ordered "only-you" list (credits URGENT, SNS optional, GitHub Pro, domain, AI key, IAM apply, connector choice) |
+| S7-3 | Subagent A — board-pack PDF engine | ✅ | reportlab multi-page renderer (cover + per-section layouts, sparse-safe, cents→$), export contract unchanged, pypdf-verified tests; full API suite green |
+| S7-4 | Subagent B — forecast ensemble | ✅ | SARIMAX + ensemble + auto (rolling backtest selection, accuracy.backtest evidence); synthetic backtest sarimax 0.7% vs baseline 20.5% MAPE; ensemble semantics redefined (was prophet-absent local blend) — defaults untouched |
+| S7-5 | Subagent C — typed API client | ✅ | openapi-typescript pipeline (versioned spec+types, no Python needed at build), AuthUser/Login/health generated-backed; untyped {data,meta} envelopes documented as the unlock; drift found (client-only `template` field) |
+| S7-6 | IAM least-privilege policy | ✅ artifact | `infra/aws/deployer-least-privilege.json` + RUNBOOK §7 console procedure; NOT auto-applied (lockout risk) — owner item |
+| S7-7 | Pre-commit hook | ✅ | `.githooks/pre-commit` staged-file ruff/eslint; validated itself on every session commit |
