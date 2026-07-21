@@ -566,6 +566,7 @@ Details and manifests are designed in the
 | ADR-006 | AI provider abstraction + offline mock | Accepted | No vendor lock-in; full offline dev/demo/CI. |
 | ADR-007 | Redis for cache + queue + pubsub | Accepted | One dependency covers three needs at MVP scale. |
 | ADR-008 | Async jobs for ETL/forecast/simulation/reports | Accepted | Long-running, bursty work must not block requests. |
+| ADR-009 | Knowledge graph stays an in-memory projection rebuilt from Postgres at boot; Neo4j deferred | Accepted 2026-07-20 | The graph is derived data (rebuild ≈ seconds at current scale) and every task rebuilds identically, so durability adds ops cost without correctness gain. Revisit when graph size makes boot rebuilds slow (>30s) or cross-task graph mutations appear. |
 
 ---
 
