@@ -292,3 +292,17 @@ See **time estimates** in `AI-HANDOFF.md` § Estimates.
 | 2026-07-01 | Deploy-prep session on `ekam-testing`: seed anomaly date-rollover fix, typescript 6 / next 16 / tailwind 4 bumps (gated on build+E2E), README sync, deploy preflight (blocked only on missing `aws`/`docker` CLIs), session docs in `docs/deploy-prep/` |
 | 2026-06-29 | Session end: P1–P9 + post-MVP complete; 116 pytest + 4 E2E; deploy checklist ready |
 | 2026-06-29 | P8 merged; P9 AWS Terraform, OIDC, security hardening, ClickHouse path |
+
+## 16. Dependency triage ritual (weekly, ~15 min)
+
+Proven pattern (2026-07-01 and 2026-07-20 sessions):
+
+1. List open Dependabot PRs (`Ekam-Bindra/aurora/pulls`); note each proposed version.
+2. Never merge Dependabot branches directly — they may be based on stale `main`.
+3. On `ekam-testing`: patch/minor bumps within existing ranges → `pnpm update -r <pkgs>`
+   (lockfile-only); majors → edit ranges one at a time.
+4. Gate every bump: web `lint + typecheck + build`, Python `ruff + pytest`, then E2E in CI.
+5. Ship through the normal PR; after merge, close the Dependabot PRs by deleting their
+   branches (they are superseded).
+6. Rejections are recorded where the next person will look (e.g. eslint 10's blocker lives
+   in `eslint.config.mjs`).

@@ -24,6 +24,7 @@ from ...services.board_reports import (
     get_report,
     list_reports,
 )
+from ...services.report_storage import archive_export
 from .schemas import BoardReportOut, BoardReportRef
 
 router = APIRouter(prefix="/board-reports", tags=["board-reports"])
@@ -183,8 +184,9 @@ def get_board_report_export(
     if exported is None:
         raise NotFound("Report content not generated yet")
     body, media_type, filename = exported
-    return Response(
-        content=body,
-        media_type=media_type,
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-    )
+    headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
+    archive_url = archive_export(report, body=body, media_type=media_type, filename=filename)
+    if archive_url:
+        # Durable S3 copy + shareable link (1h presigned); best-effort.
+        headers["X-Export-Archive-Url"] = archive_url
+    return Response(content=body, media_type=media_type, headers=headers)
