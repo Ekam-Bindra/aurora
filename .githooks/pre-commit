@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Fast pre-commit: lint only what is staged. Enable once per clone:
+#   git config core.hooksPath .githooks
+set -euo pipefail
+ROOT="$(git rev-parse --show-toplevel)"
+
+PY_STAGED=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.py$' || true)
+if [ -n "$PY_STAGED" ]; then
+  RUFF="$ROOT/apps/api/.venv/bin/ruff"
+  command -v ruff >/dev/null 2>&1 && RUFF=ruff
+  echo "$PY_STAGED" | xargs "$RUFF" check
+fi
+
+WEB_STAGED=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^apps/web/.*\.(ts|tsx|mjs)$' | sed 's|^apps/web/||' || true)
+if [ -n "$WEB_STAGED" ]; then
+  (cd "$ROOT/apps/web" && echo "$WEB_STAGED" | xargs pnpm exec eslint)
+fi
+
+echo "pre-commit: clean"
