@@ -1,0 +1,7 @@
+# Default owner for everything — review requests route here automatically.
+* @Ekam-Bindra
+
+# High-blast-radius areas called out explicitly.
+/infra/ @Ekam-Bindra
+/.github/workflows/ @Ekam-Bindra
+/packages/database/aurora_db/migrations/ @Ekam-Bindra

@@ -101,3 +101,17 @@ remaining list + continuing development. Outcomes:
 | S5-4 | Continuous delivery | ✅ | Push-to-main auto-deploys staging (production stays manual); immutable `sha-` image tags; concurrency guard; post-deploy ALB health gate (deploy role gained `elbv2:DescribeLoadBalancers`) |
 | S5-5 | Branch protection | 🚫 user decision | GitHub Free + private repo → 403 "Upgrade to GitHub Pro or make this repository public". HIGH PRIORITY governance gap |
 | S5-6 | CloudWatch alarms | ✅ | 9 alarms (ALB 5xx / p95 latency / unhealthy hosts ×2, ECS CPU ×2, RDS CPU/storage/connections) → SNS email; **user must click the AWS subscription-confirmation email** |
+
+## Session 6 (2026-07-20) — "begin work using the master prompt"
+
+| # | Task | Status | Outcome notes |
+|---|------|--------|---------------|
+| S6-0 | Recon after 18 idle days | ✅ | Staging healthy, branches aligned, main CI+deploy green. **Credits $11.05 — ~2 days of runway** (was $120 on 07-02); SNS confirm still pending → resent; 5 new Dependabot patch PRs |
+| S6-1 | Readiness vs liveness | ✅ | `/ready` now 503s when DB unreachable and the ALB api target group probes it (rotation-correct); ECS container check stays on `/health`; degradation contract test; verified live — targets 2/2 healthy on the new probe |
+| S6-2 | Backups/DR runbook | ✅ | [`../RUNBOOK-DR.md`](../RUNBOOK-DR.md): snapshot policy (1d/7d), restore procedure, measured 30-min rebuild drill, JWT/DB-password rotation, free-plan guardrails |
+| S6-3 | Operations dashboard | ✅ | CloudWatch dashboard (traffic, latency percentiles, target health, ECS, RDS, alarm strip) + 3 saved Logs Insights queries; applied |
+| S6-4 | Scheduled SLO gate | ✅ | `slo.yml` Mon+Thu k6 vs staging at p95<500ms (measured 42.8ms), graceful no-op when stack destroyed; smoke.js gains SLO_P95_MS |
+| S6-5 | Audit coverage | ✅ | Report approve, source register, upload, sync, scenario create, simulation run now audited (+ pinning test); admin was already service-layer audited |
+| S6-6 | Dependabot batch (#27–#31) | ✅ | All five were within-range lockfile bumps; applied + gated; PRs closed as superseded |
+| S6-7 | Governance files | ✅ | PR template with standards checklist, CODEOWNERS |
+| S6-8 | IAM deployer scoping | ⏭️ flagged | Deferred — apply-time lockout risk needs a careful, tested policy; runbook documents the manual rotation meanwhile |
