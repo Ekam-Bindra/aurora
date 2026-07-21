@@ -12,6 +12,7 @@ from __future__ import annotations
 from typing import Dict
 
 from fastapi import APIRouter, Response, status
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import text
 
 from ...core.config import get_settings
@@ -20,14 +21,29 @@ from ...persistence import is_database_enabled, session_scope
 router = APIRouter(tags=["health"])
 
 
-@router.get("/health")
+class HealthOut(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    status: str
+    service: str
+    version: str
+
+
+class ReadyOut(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    status: str
+    checks: Dict[str, str]
+
+
+@router.get("/health", response_model=HealthOut)
 def health() -> dict:
     """Liveness: the process is up."""
     settings = get_settings()
     return {"status": "ok", "service": settings.project_name, "version": settings.version}
 
 
-@router.get("/ready")
+@router.get("/ready", response_model=ReadyOut)
 def ready(response: Response) -> dict:
     """Readiness: dependencies are reachable. 503 removes the task from rotation."""
     checks: Dict[str, str] = {}

@@ -976,6 +976,59 @@ export interface components {
             period_end?: string | null;
             /** Sections */
             sections?: string[];
+            /** Template */
+            template?: string | null;
+        };
+        /** BoardReportOut */
+        BoardReportOut: {
+            /** Id */
+            id: string;
+            /** Company Id */
+            company_id: string;
+            /** Title */
+            title: string;
+            /** Period Start */
+            period_start?: string | null;
+            /** Period End */
+            period_end?: string | null;
+            /** Sections */
+            sections: string[];
+            /** Status */
+            status: string;
+            /** Content */
+            content?: {
+                [key: string]: unknown;
+            } | null;
+            /** Export Url */
+            export_url?: string | null;
+            /** Created By */
+            created_by?: string | null;
+            /** Approved By */
+            approved_by?: string | null;
+            /** Created At */
+            created_at?: string | null;
+            /** Updated At */
+            updated_at?: string | null;
+            /** Ws Channel */
+            ws_channel?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * BoardReportRef
+         * @description Minimal payload returned by create/generate/approve.
+         */
+        BoardReportRef: {
+            /** Id */
+            id: string;
+            /** Status */
+            status: string;
+            /** Ws Channel */
+            ws_channel?: string | null;
+            /** Approved By */
+            approved_by?: string | null;
+        } & {
+            [key: string]: unknown;
         };
         /** Body_post_ingestion_upload_api_v1_ingestion_uploads_post */
         Body_post_ingestion_upload_api_v1_ingestion_uploads_post: {
@@ -1025,6 +1078,71 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        /** DataSourceOut */
+        DataSourceOut: {
+            /** Id */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Name */
+            name: string;
+            /** Status */
+            status: string;
+            /** Config */
+            config: {
+                [key: string]: unknown;
+            };
+            /** Last Synced At */
+            last_synced_at?: string | null;
+            health?: components["schemas"]["SourceHealth"] | null;
+            /** Created At */
+            created_at?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** Envelope[BoardReportOut] */
+        Envelope_BoardReportOut_: {
+            data: components["schemas"]["BoardReportOut"];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[BoardReportRef] */
+        Envelope_BoardReportRef_: {
+            data: components["schemas"]["BoardReportRef"];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[DataSourceOut] */
+        Envelope_DataSourceOut_: {
+            data: components["schemas"]["DataSourceOut"];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[IngestionJobOut] */
+        Envelope_IngestionJobOut_: {
+            data: components["schemas"]["IngestionJobOut"];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[IngestionJobRef] */
+        Envelope_IngestionJobRef_: {
+            data: components["schemas"]["IngestionJobRef"];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[List[aurora.modules.reports.schemas.BoardReportOut]] */
+        Envelope_List_BoardReportOut__: {
+            /** Data */
+            data: components["schemas"]["BoardReportOut"][];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[List[aurora.modules.ingestion.schemas.DataSourceOut]] */
+        Envelope_List_DataSourceOut__: {
+            /** Data */
+            data: components["schemas"]["DataSourceOut"][];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[List[aurora.modules.ingestion.schemas.IngestionJobOut]] */
+        Envelope_List_IngestionJobOut__: {
+            /** Data */
+            data: components["schemas"]["IngestionJobOut"][];
+            meta: components["schemas"]["Meta"];
+        };
         /** ForecastCreate */
         ForecastCreate: {
             /**
@@ -1057,6 +1175,85 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /** HealthOut */
+        HealthOut: {
+            /** Status */
+            status: string;
+            /** Service */
+            service: string;
+            /** Version */
+            version: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** IngestionJobOut */
+        IngestionJobOut: {
+            /** Job Id */
+            job_id: string;
+            /** Company Id */
+            company_id: string;
+            /** Target */
+            target: string;
+            /** Status */
+            status: string;
+            /** Source Id */
+            source_id?: string | null;
+            /** Filename */
+            filename?: string | null;
+            /**
+             * Rows Total
+             * @default 0
+             */
+            rows_total: number;
+            /**
+             * Rows Inserted
+             * @default 0
+             */
+            rows_inserted: number;
+            /**
+             * Rows Updated
+             * @default 0
+             */
+            rows_updated: number;
+            /**
+             * Rows Rejected
+             * @default 0
+             */
+            rows_rejected: number;
+            /**
+             * Errors
+             * @default []
+             */
+            errors: {
+                [key: string]: unknown;
+            }[];
+            /** Lineage Ref */
+            lineage_ref?: string | null;
+            /** Started At */
+            started_at?: string | null;
+            /** Finished At */
+            finished_at?: string | null;
+            /** Ws Channel */
+            ws_channel?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * IngestionJobRef
+         * @description Minimal payload returned by upload/sync accept responses.
+         */
+        IngestionJobRef: {
+            /** Job Id */
+            job_id: string;
+            /** Status */
+            status: string;
+            /** Target */
+            target: string;
+            /** Ws Channel */
+            ws_channel?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
         /** LoginRequest */
         LoginRequest: {
             /** Email */
@@ -1078,6 +1275,24 @@ export interface components {
             /** Expires In */
             expires_in: number;
             user: components["schemas"]["AuthUser"];
+        };
+        /** Meta */
+        Meta: {
+            /** Request Id */
+            request_id?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ReadyOut */
+        ReadyOut: {
+            /** Status */
+            status: string;
+            /** Checks */
+            checks: {
+                [key: string]: string;
+            };
+        } & {
+            [key: string]: unknown;
         };
         /** RefreshRequest */
         RefreshRequest: {
@@ -1113,6 +1328,17 @@ export interface components {
              */
             trials: number;
             assumptions?: components["schemas"]["AssumptionsModel"];
+        };
+        /** SourceHealth */
+        SourceHealth: {
+            /** Status */
+            status?: string | null;
+            /** Last Synced At */
+            last_synced_at?: unknown | null;
+            /** Detail */
+            detail?: string | null;
+        } & {
+            [key: string]: unknown;
         };
         /** UserCreate */
         UserCreate: {
@@ -1178,9 +1404,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["HealthOut"];
                 };
             };
         };
@@ -1200,9 +1424,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["ReadyOut"];
                 };
             };
         };
@@ -2480,9 +2702,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["Envelope_List_DataSourceOut__"];
                 };
             };
         };
@@ -2506,9 +2726,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["Envelope_DataSourceOut_"];
                 };
             };
             /** @description Validation Error */
@@ -2541,9 +2759,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["Envelope_IngestionJobRef_"];
                 };
             };
             /** @description Validation Error */
@@ -2576,9 +2792,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["Envelope_IngestionJobRef_"];
                 };
             };
             /** @description Validation Error */
@@ -2609,9 +2823,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["Envelope_IngestionJobOut_"];
                 };
             };
             /** @description Validation Error */
@@ -2640,9 +2852,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["Envelope_List_IngestionJobOut__"];
                 };
             };
         };
@@ -2662,9 +2872,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["Envelope_List_BoardReportOut__"];
                 };
             };
         };
@@ -2688,9 +2896,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["Envelope_BoardReportRef_"];
                 };
             };
             /** @description Validation Error */
@@ -2721,9 +2927,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["Envelope_BoardReportOut_"];
                 };
             };
             /** @description Validation Error */
@@ -2754,9 +2958,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["Envelope_BoardReportRef_"];
                 };
             };
             /** @description Validation Error */
@@ -2787,9 +2989,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["Envelope_BoardReportRef_"];
                 };
             };
             /** @description Validation Error */

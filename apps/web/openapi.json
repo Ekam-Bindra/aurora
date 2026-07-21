@@ -19,9 +19,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Health Api V1 Health Get"
+                  "$ref": "#/components/schemas/HealthOut"
                 }
               }
             }
@@ -43,9 +41,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Ready Api V1 Ready Get"
+                  "$ref": "#/components/schemas/ReadyOut"
                 }
               }
             }
@@ -1989,9 +1985,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Get Data Sources Api V1 Data Sources Get"
+                  "$ref": "#/components/schemas/Envelope_List_DataSourceOut__"
                 }
               }
             }
@@ -2025,9 +2019,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Post Data Source Api V1 Data Sources Post"
+                  "$ref": "#/components/schemas/Envelope_DataSourceOut_"
                 }
               }
             }
@@ -2073,9 +2065,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Post Ingestion Upload Api V1 Ingestion Uploads Post"
+                  "$ref": "#/components/schemas/Envelope_IngestionJobRef_"
                 }
               }
             }
@@ -2143,9 +2133,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Post Ingestion Sync Api V1 Ingestion  Source Id  Sync Post"
+                  "$ref": "#/components/schemas/Envelope_IngestionJobRef_"
                 }
               }
             }
@@ -2192,9 +2180,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Get Ingestion Job Api V1 Ingestion Jobs  Job Id  Get"
+                  "$ref": "#/components/schemas/Envelope_IngestionJobOut_"
                 }
               }
             }
@@ -2225,9 +2211,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Get Ingestion Jobs Api V1 Ingestion Jobs Get"
+                  "$ref": "#/components/schemas/Envelope_List_IngestionJobOut__"
                 }
               }
             }
@@ -2253,9 +2237,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Get Board Reports Api V1 Board Reports Get"
+                  "$ref": "#/components/schemas/Envelope_List_BoardReportOut__"
                 }
               }
             }
@@ -2289,9 +2271,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Post Board Report Api V1 Board Reports Post"
+                  "$ref": "#/components/schemas/Envelope_BoardReportRef_"
                 }
               }
             }
@@ -2343,9 +2323,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Get Board Report Api V1 Board Reports  Report Id  Get"
+                  "$ref": "#/components/schemas/Envelope_BoardReportOut_"
                 }
               }
             }
@@ -2392,9 +2370,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Post Generate Board Report Api V1 Board Reports  Report Id  Generate Post"
+                  "$ref": "#/components/schemas/Envelope_BoardReportRef_"
                 }
               }
             }
@@ -2441,9 +2417,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Post Approve Board Report Api V1 Board Reports  Report Id  Approve Post"
+                  "$ref": "#/components/schemas/Envelope_BoardReportRef_"
                 }
               }
             }
@@ -2762,6 +2736,17 @@
             },
             "type": "array",
             "title": "Sections"
+          },
+          "template": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template"
           }
         },
         "type": "object",
@@ -2769,6 +2754,185 @@
           "title"
         ],
         "title": "BoardReportCreate"
+      },
+      "BoardReportOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "company_id": {
+            "type": "string",
+            "title": "Company Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "period_start": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period Start"
+          },
+          "period_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period End"
+          },
+          "sections": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sections"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          },
+          "export_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Export Url"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "approved_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "ws_channel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ws Channel"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "id",
+          "company_id",
+          "title",
+          "sections",
+          "status"
+        ],
+        "title": "BoardReportOut"
+      },
+      "BoardReportRef": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "ws_channel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ws Channel"
+          },
+          "approved_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "id",
+          "status"
+        ],
+        "title": "BoardReportRef",
+        "description": "Minimal payload returned by create/generate/approve."
       },
       "Body_post_ingestion_upload_api_v1_ingestion_uploads_post": {
         "properties": {
@@ -2880,6 +3044,213 @@
         ],
         "title": "DataSourceCreate"
       },
+      "DataSourceOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "config": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Config"
+          },
+          "last_synced_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Synced At"
+          },
+          "health": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceHealth"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "status",
+          "config"
+        ],
+        "title": "DataSourceOut"
+      },
+      "Envelope_BoardReportOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/BoardReportOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[BoardReportOut]"
+      },
+      "Envelope_BoardReportRef_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/BoardReportRef"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[BoardReportRef]"
+      },
+      "Envelope_DataSourceOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/DataSourceOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[DataSourceOut]"
+      },
+      "Envelope_IngestionJobOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/IngestionJobOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[IngestionJobOut]"
+      },
+      "Envelope_IngestionJobRef_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/IngestionJobRef"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[IngestionJobRef]"
+      },
+      "Envelope_List_BoardReportOut__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/BoardReportOut"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[List[aurora.modules.reports.schemas.BoardReportOut]]"
+      },
+      "Envelope_List_DataSourceOut__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/DataSourceOut"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[List[aurora.modules.ingestion.schemas.DataSourceOut]]"
+      },
+      "Envelope_List_IngestionJobOut__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/IngestionJobOut"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[List[aurora.modules.ingestion.schemas.IngestionJobOut]]"
+      },
       "ForecastCreate": {
         "properties": {
           "metric": {
@@ -2933,6 +3304,190 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "HealthOut": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "service": {
+            "type": "string",
+            "title": "Service"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "status",
+          "service",
+          "version"
+        ],
+        "title": "HealthOut"
+      },
+      "IngestionJobOut": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "company_id": {
+            "type": "string",
+            "title": "Company Id"
+          },
+          "target": {
+            "type": "string",
+            "title": "Target"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filename"
+          },
+          "rows_total": {
+            "type": "integer",
+            "title": "Rows Total",
+            "default": 0
+          },
+          "rows_inserted": {
+            "type": "integer",
+            "title": "Rows Inserted",
+            "default": 0
+          },
+          "rows_updated": {
+            "type": "integer",
+            "title": "Rows Updated",
+            "default": 0
+          },
+          "rows_rejected": {
+            "type": "integer",
+            "title": "Rows Rejected",
+            "default": 0
+          },
+          "errors": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Errors",
+            "default": []
+          },
+          "lineage_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lineage Ref"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "ws_channel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ws Channel"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "job_id",
+          "company_id",
+          "target",
+          "status"
+        ],
+        "title": "IngestionJobOut"
+      },
+      "IngestionJobRef": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "target": {
+            "type": "string",
+            "title": "Target"
+          },
+          "ws_channel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ws Channel"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "job_id",
+          "status",
+          "target"
+        ],
+        "title": "IngestionJobRef",
+        "description": "Minimal payload returned by upload/sync accept responses."
+      },
       "LoginRequest": {
         "properties": {
           "email": {
@@ -2982,6 +3537,46 @@
           "user"
         ],
         "title": "LoginResponse"
+      },
+      "Meta": {
+        "properties": {
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "Meta"
+      },
+      "ReadyOut": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "checks": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Checks"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "status",
+          "checks"
+        ],
+        "title": "ReadyOut"
       },
       "RefreshRequest": {
         "properties": {
@@ -3065,6 +3660,44 @@
           "name"
         ],
         "title": "ScenarioCreate"
+      },
+      "SourceHealth": {
+        "properties": {
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "last_synced_at": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Synced At"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "SourceHealth"
       },
       "UserCreate": {
         "properties": {

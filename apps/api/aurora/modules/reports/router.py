@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from ...core.errors import NotFound, Unprocessable, ValidationError
 from ...core.logging import get_request_id
 from ...core.rbac import AuthContext, Permission
+from ...core.schemas import Envelope
 from ...deps import get_db_session, require_any_permission, require_permission
 from ...services.audit import record_audit
 from ...services.board_reports import (
@@ -23,6 +24,7 @@ from ...services.board_reports import (
     get_report,
     list_reports,
 )
+from .schemas import BoardReportOut, BoardReportRef
 
 router = APIRouter(prefix="/board-reports", tags=["board-reports"])
 
@@ -41,9 +43,12 @@ class BoardReportCreate(BaseModel):
     period_start: Optional[date] = None
     period_end: Optional[date] = None
     sections: List[str] = Field(default_factory=list)
+    # Advisory client-side preset name; sections above are what the server uses.
+    # Declared so the schema matches what the web client actually sends.
+    template: Optional[str] = None
 
 
-@router.post("", status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED, response_model=Envelope[BoardReportRef])
 def post_board_report(
     body: BoardReportCreate,
     context: AuthContext = Depends(require_permission(Permission.CREATE_BOARD_REPORT)),
@@ -76,7 +81,7 @@ def post_board_report(
     }
 
 
-@router.get("")
+@router.get("", response_model=Envelope[List[BoardReportOut]])
 def get_board_reports(
     context: AuthContext = Depends(require_permission(Permission.READ_FINANCIALS)),
     session: Optional[Session] = Depends(get_db_session),
@@ -85,7 +90,7 @@ def get_board_reports(
     return {"data": items, "meta": {"request_id": get_request_id()}}
 
 
-@router.get("/{report_id}")
+@router.get("/{report_id}", response_model=Envelope[BoardReportOut])
 def get_board_report(
     report_id: str,
     context: AuthContext = Depends(require_permission(Permission.READ_FINANCIALS)),
@@ -97,7 +102,11 @@ def get_board_report(
     return {"data": data, "meta": {"request_id": get_request_id()}}
 
 
-@router.post("/{report_id}/generate", status_code=status.HTTP_202_ACCEPTED)
+@router.post(
+    "/{report_id}/generate",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=Envelope[BoardReportRef],
+)
 def post_generate_board_report(
     report_id: str,
     context: AuthContext = Depends(require_permission(Permission.CREATE_BOARD_REPORT)),
@@ -128,7 +137,7 @@ def post_generate_board_report(
     }
 
 
-@router.post("/{report_id}/approve")
+@router.post("/{report_id}/approve", response_model=Envelope[BoardReportRef])
 def post_approve_board_report(
     report_id: str,
     context: AuthContext = Depends(require_permission(Permission.APPROVE_BOARD_REPORT)),
