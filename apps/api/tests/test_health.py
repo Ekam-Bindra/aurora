@@ -17,6 +17,32 @@ def test_ready_ok(client):
     assert resp.json()["status"] == "ready"
 
 
+def test_ready_reports_memory_store_without_database(client):
+    resp = client.get("/api/v1/ready")
+    assert resp.json()["checks"] == {"store": "memory"}
+
+
+def test_ready_returns_503_when_database_unreachable(client, monkeypatch):
+    """Degradation contract: DB down -> 503 -> ALB removes the task from rotation."""
+    from contextlib import contextmanager
+
+    from aurora.modules.health import router as health_router
+
+    @contextmanager
+    def _broken_session_scope():
+        raise RuntimeError("connection refused")
+        yield  # pragma: no cover
+
+    monkeypatch.setattr(health_router, "is_database_enabled", lambda: True)
+    monkeypatch.setattr(health_router, "session_scope", _broken_session_scope)
+
+    resp = client.get("/api/v1/ready")
+    assert resp.status_code == 503
+    body = resp.json()
+    assert body["status"] == "not_ready"
+    assert body["checks"]["database"].startswith("error:")
+
+
 def test_request_id_header_present(client):
     resp = client.get("/api/v1/health")
     assert resp.headers.get("X-Request-Id", "").startswith("req_")
