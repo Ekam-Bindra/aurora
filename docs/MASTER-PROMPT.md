@@ -152,8 +152,8 @@ Epics in priority order; items marked ☐ open, ◐ partial, 🚫 needs-user-inp
   signed URLs (bucket + IAM already provisioned).
 - ✅ **Forecast ensemble** (2026-07-20): SARIMAX + ensemble + "auto" with rolling-backtest
   selection; `accuracy.backtest` carries {selected, mape_by_method, holdout_points} as the
-  explainability evidence (synthetic backtest: sarimax 0.7% vs baseline 20.5% MAPE). Open:
-  surface the backtest block in the forecasting UI.
+  explainability evidence (synthetic backtest: sarimax 0.7% vs baseline 20.5% MAPE);
+  forecasting UI has the method selector + "Why this method" backtest panel (2026-07-20).
 - ☐ **Live connectors** beyond CSV: one real accounting SaaS connector (QuickBooks/Xero
   sandbox) through the existing connector registry + lineage.
 - ☐ **Graph durability**: Neo4j in prod or keep in-memory projection rebuilt at boot
@@ -167,11 +167,10 @@ Epics in priority order; items marked ☐ open, ◐ partial, 🚫 needs-user-inp
 - ☐ Schema-per-tenant isolation option per ADR-004's documented upgrade path.
 
 ### E5 — Developer experience
-- ◐ OpenAPI-generated typed client (2026-07-20): versioned spec + generated types pipeline
-  (`pnpm generate:api-types`); auth/login/health types generated-backed. Open: add
-  `response_model` envelopes to API routes so the remaining hand-rolled interfaces (board
-  reports, ingestion, metrics…) can flip to generated — also fixes the found drift
-  (client-only `template` field).
+- ◐ OpenAPI-generated typed client: Envelope[T] response models now cover health/ready,
+  board reports, data sources, and ingestion jobs — those client types are generated-backed
+  (narrowing overrides preserve UI literal unions; template drift fixed server-side). Open:
+  same treatment for metrics/graph/forecasts/risk/simulation routes.
 - ✅ Pre-commit hooks (2026-07-20): `.githooks/pre-commit` lints staged files only
   (ruff/eslint); enable per clone with `git config core.hooksPath .githooks`.
 - ☐ Devcontainer/Nix for parity with CI (kills the 3.9-vs-3.11 gap and the no-Docker gap).

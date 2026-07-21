@@ -127,3 +127,13 @@ remaining list + continuing development. Outcomes:
 | S7-5 | Subagent C — typed API client | ✅ | openapi-typescript pipeline (versioned spec+types, no Python needed at build), AuthUser/Login/health generated-backed; untyped {data,meta} envelopes documented as the unlock; drift found (client-only `template` field) |
 | S7-6 | IAM least-privilege policy | ✅ artifact | `infra/aws/deployer-least-privilege.json` + RUNBOOK §7 console procedure; NOT auto-applied (lockout risk) — owner item |
 | S7-7 | Pre-commit hook | ✅ | `.githooks/pre-commit` staged-file ruff/eslint; validated itself on every session commit |
+
+## Session 8 (2026-07-20, same day) — "next items on your end"
+
+| # | Task | Status | Outcome notes |
+|---|------|--------|---------------|
+| S8-0 | Recon | ✅ | Credits **$9.28** (~2 days); staging healthy; branches aligned |
+| S8-1 | Typed response envelopes | ✅ | Envelope[T] + payload models (extra-allow, serializer-exact) on health/ready, board reports, ingestion; `template` field declared server-side |
+| S8-2 | Client flip to generated types | ✅ | BoardReport*/DataSource/IngestionJob* generated-backed with narrowing overrides; OmitIndexSignature helper (additionalProperties pitfall); gates green |
+| S8-3 | Backtest evidence UI | ✅ | Forecasting page: method selector (baseline/sarimax/ensemble/auto) + "Why this method" panel rendering accuracy.backtest |
+| S8-4 | ADR-009 + issue templates | ✅ | Graph stays boot-rebuilt projection (revisit >30s rebuilds); bug/feature templates |
