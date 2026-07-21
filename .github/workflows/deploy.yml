@@ -62,11 +62,28 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Check stack presence
+        id: stack
+        env:
+          CLUSTER: ${{ env.PROJECT_NAME }}-${{ env.TARGET_ENV }}
+        run: |
+          STATUS=$(aws ecs describe-clusters --clusters "$CLUSTER" \
+            --query "clusters[0].status" --output text 2>/dev/null || true)
+          if [ "$STATUS" = "ACTIVE" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "## Deploy skipped" >> $GITHUB_STEP_SUMMARY
+            echo "Stack ${CLUSTER} is not running (destroyed to save credits). Rebuild: RUNBOOK-DR.md §3." >> $GITHUB_STEP_SUMMARY
+          fi
+
       - name: Login to Amazon ECR
+        if: steps.stack.outputs.present == 'true'
         id: ecr
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build and push API image
+        if: steps.stack.outputs.present == 'true'
         env:
           ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
         run: |
@@ -76,6 +93,7 @@ jobs:
           docker push --all-tags $ECR_REGISTRY/${{ env.PROJECT_NAME }}-api
 
       - name: Build and push web image
+        if: steps.stack.outputs.present == 'true'
         env:
           ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
         run: |
@@ -85,7 +103,7 @@ jobs:
           docker push --all-tags $ECR_REGISTRY/${{ env.PROJECT_NAME }}-web
 
       - name: Run database migrations (one-off ECS task)
-        if: github.event_name == 'workflow_dispatch' && inputs.run_migrations
+        if: steps.stack.outputs.present == 'true' && github.event_name == 'workflow_dispatch' && inputs.run_migrations
         env:
           CLUSTER: ${{ env.PROJECT_NAME }}-${{ env.TARGET_ENV }}
         run: |
@@ -105,6 +123,7 @@ jobs:
           [ "$EXIT" = "0" ] || exit 1
 
       - name: Force ECS service redeployment
+        if: steps.stack.outputs.present == 'true'
         env:
           CLUSTER: ${{ env.PROJECT_NAME }}-${{ env.TARGET_ENV }}
         run: |
@@ -122,6 +141,7 @@ jobs:
           echo "Deployed tag ${IMAGE_TAG} (sha-${GITHUB_SHA::7}) to ${CLUSTER}"
 
       - name: Post-deploy health gate
+        if: steps.stack.outputs.present == 'true'
         run: |
           ALB=$(aws elbv2 describe-load-balancers \
             --names "${{ env.PROJECT_NAME }}-${{ env.TARGET_ENV }}" \
@@ -138,6 +158,7 @@ jobs:
           exit 1
 
       - name: Deployment summary
+        if: steps.stack.outputs.present == 'true'
         run: |
           echo "## Deploy complete" >> $GITHUB_STEP_SUMMARY
           echo "- Environment: ${{ env.TARGET_ENV }}" >> $GITHUB_STEP_SUMMARY

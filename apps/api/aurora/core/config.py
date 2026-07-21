@@ -81,6 +81,8 @@ class Settings(BaseSettings):
     anthropic_model: str = "claude-sonnet-5"
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
+    # Any OpenAI-compatible endpoint works (Groq, Gemini compat, OpenRouter...).
+    openai_base_url: str = "https://api.openai.com"
     ai_timeout_seconds: float = 30.0
 
     # Demo seeding
