@@ -9,6 +9,7 @@ dependencies = [
     "SQLAlchemy>=2.0,<2.1",
     "duckdb>=1.0",
     "numpy>=1.24",
+    "statsmodels>=0.14",
 ]
 
 [project.optional-dependencies]

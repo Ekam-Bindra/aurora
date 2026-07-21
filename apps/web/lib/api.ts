@@ -1,24 +1,32 @@
 /**
  * Minimal typed API client for the AURORA backend.
  *
- * Phase 1 hand-rolls a thin wrapper; Phase 2 replaces this with the generated client in
- * `packages/types` (OpenAPI -> TS), per docs/architecture/folder-structure.md.
+ * Types come from two places (see apps/web/README.md, "Typed API client"):
+ * - Generated: `lib/api-types.ts`, emitted by openapi-typescript from `apps/web/openapi.json`
+ *   (regenerate with `pnpm generate:api-types`). Used where the FastAPI route declares a real
+ *   response schema (auth models today).
+ * - Hand-rolled: everything the API serves as an untyped `{data, meta}` envelope (plain `dict`
+ *   returns without `response_model`) — the generated type for those endpoints collapses to
+ *   `Record<string, unknown>`, so the interfaces below stay the source of truth until the API
+ *   grows typed response envelopes.
  */
+import type { components, paths } from "./api-types";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ??
   (typeof window !== "undefined" ? "/api/v1" : "http://localhost:8000/api/v1");
 const TOKEN_KEY = "aurora.access_token";
 
-export type AuthUser = {
-  id: string;
-  full_name: string;
-  email: string;
-  title: string;
-  company: { id: string; name: string; slug: string };
-  roles: string[];
-  permissions: string[];
-};
+// Generated-backed: drop-in replacements for the previous hand-rolled shapes.
+export type AuthUser = components["schemas"]["AuthUser"];
+export type LoginResponse = components["schemas"]["LoginResponse"];
+
+// Health/ready are wired through the generated `paths`, but the routes return plain dicts
+// (no response_model), so both currently resolve to `Record<string, unknown>`.
+export type HealthResponse =
+  paths["/api/v1/health"]["get"]["responses"][200]["content"]["application/json"];
+export type ReadyResponse =
+  paths["/api/v1/ready"]["get"]["responses"][200]["content"]["application/json"];
 
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -71,7 +79,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 }
 
 export async function login(email: string, password: string): Promise<AuthUser> {
-  const data = await request<{ access_token: string; user: AuthUser }>("/auth/login", {
+  const data = await request<LoginResponse>("/auth/login", {
     method: "POST",
     body: JSON.stringify({ email, password }),
   });
@@ -610,6 +618,9 @@ function parseExplainRef(ref: string): { kind: ExplainData["kind"]; id: string }
 }
 
 // --- Data Sources & Ingestion (Phase 7) ---
+// Hand-rolled on purpose: /ingestion/jobs (list + get) and /data-sources serve an untyped
+// {data, meta} envelope (plain dict, no response_model), so the generated response types
+// collapse to Record<string, unknown> and cannot replace the interfaces below.
 
 export type DataSourceKind = "file" | "accounting" | "crm" | "hris" | "api";
 export type DataSourceStatus = "connected" | "error" | "syncing" | "disabled";
@@ -784,6 +795,11 @@ export function formatDataSourceKind(kind: string): string {
 }
 
 // --- Board Reports (Phase 8) ---
+// Hand-rolled on purpose: /board-reports (list + get) serve an untyped {data, meta} envelope,
+// so the generated response types collapse to Record<string, unknown>. The request schema
+// components["schemas"]["BoardReportCreate"] exists but omits `template` (the server ignores
+// it) and widens `sections` to string[], so BoardReportCreateParams also stays hand-rolled
+// to match actual client usage.
 
 export type BoardReportSection =
   | "financial_summary"

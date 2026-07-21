@@ -108,3 +108,21 @@ aws ecs update-service --cluster aurora-staging --service aurora-staging-api --f
 |------|-------|--------|
 | 2026-07-02 | Cold build (first deploy) | ~30 min to healthy incl. two real defects found/fixed (psycopg extra, parents[3]) |
 | — | Next: timed destroy→rebuild rehearsal | pending owner's staging-uptime decision |
+
+## 7. Deployer IAM hardening (documented, deliberately not yet applied)
+
+`aurora-deployer` currently holds `AdministratorAccess` (first-deploy pragmatism). The
+least-privilege replacement lives at `infra/aws/deployer-least-privilege.json`.
+
+Apply it from the AWS Console (root or a second admin — never from a session that depends on
+the user being modified, to avoid locking out your own tooling mid-change):
+
+1. IAM → Policies → Create policy → JSON → paste the file → name `aurora-deployer-least-priv`.
+2. IAM → Users → `aurora-deployer` → attach `aurora-deployer-least-priv`, then detach
+   `AdministratorAccess`.
+3. Smoke: `aws sts get-caller-identity`, `terraform plan` (expect no permission errors), and a
+   no-op `terraform apply`.
+
+Rollback: re-attach `AdministratorAccess` from the console. Known residual wildcards
+(`ec2:Describe*`, network lifecycle) are required by Terraform planning; write actions are
+tag- or ARN-scoped to aurora resources.

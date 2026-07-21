@@ -8,6 +8,7 @@ docs/architecture/financial-risk-simulation-models.md §3.
 from __future__ import annotations
 
 import math
+import warnings
 from dataclasses import dataclass, field
 from datetime import date
 from typing import Dict, List, Optional, Tuple
@@ -39,6 +40,7 @@ class ForecastAccuracy:
     rmse_cents: int
     backtest_windows: int
     interval_coverage: Optional[float] = None
+    backtest: Optional[Dict[str, object]] = None
 
 
 @dataclass
@@ -224,6 +226,44 @@ class ForecastEngine:
         ]
         return preds, lowers, uppers, importance
 
+    def _sarimax_forecast(
+        self, values: List[int], horizon: int
+    ) -> Optional[Tuple[List[int], List[int], List[int]]]:
+        """SARIMAX with a small fixed order; None when the series is too short or the fit fails."""
+        if len(values) < 6:
+            return None
+        from statsmodels.tools.sm_exceptions import ConvergenceWarning
+        from statsmodels.tsa.statespace.sarimax import SARIMAX
+
+        if len(values) >= 24:
+            order, seasonal_order = (1, 1, 1), (1, 1, 1, 12)
+        else:
+            order, seasonal_order = (1, 1, 1), (0, 0, 0, 0)
+        y = np.asarray(values, dtype=float)
+        with warnings.catch_warnings():
+            # Low maxiter on short series routinely trips ConvergenceWarning; suppress noise.
+            warnings.simplefilter("ignore", ConvergenceWarning)
+            warnings.simplefilter("ignore", UserWarning)
+            warnings.simplefilter("ignore", RuntimeWarning)
+            try:
+                model = SARIMAX(
+                    y,
+                    order=order,
+                    seasonal_order=seasonal_order,
+                    enforce_stationarity=False,
+                    enforce_invertibility=False,
+                )
+                fitted = model.fit(disp=False, maxiter=50)
+                fc = fitted.get_forecast(steps=horizon)
+                # alpha=0.20 -> 80% interval, same level as the baseline's q10-q90 band.
+                conf = np.asarray(fc.conf_int(alpha=0.20))
+                preds = [max(0, int(v)) for v in np.asarray(fc.predicted_mean)]
+                lowers = [max(0, int(v)) for v in conf[:, 0]]
+                uppers = [max(0, int(v)) for v in conf[:, 1]]
+            except Exception:
+                return None
+        return preds, lowers, uppers
+
     def _rolling_origin_backtest(
         self,
         months: List[date],
@@ -266,6 +306,26 @@ class ForecastEngine:
                     q10, q90 = _residual_quantiles(residuals)
                     lowers = [max(0, p + q10) for p in preds]
                     uppers = [p + q90 for p in preds]
+            elif method == "sarimax":
+                sar = self._sarimax_forecast(train_v, horizon)
+                if sar is not None:
+                    preds, lowers, uppers = sar
+                else:
+                    preds, _, _, spread = self._baseline_forecast(train_v, horizon)
+                    lowers = [max(0, p - spread) for p in preds]
+                    uppers = [p + spread for p in preds]
+            elif method == "ensemble":
+                preds_b, _, _, spread = self._baseline_forecast(train_v, horizon)
+                lowers_b = [max(0, p - spread) for p in preds_b]
+                uppers_b = [p + spread for p in preds_b]
+                sar = self._sarimax_forecast(train_v, horizon)
+                if sar is not None:
+                    preds_s, lowers_s, uppers_s = sar
+                    preds = [(preds_b[i] + preds_s[i]) // 2 for i in range(horizon)]
+                    lowers = [min(lowers_b[i], lowers_s[i]) for i in range(horizon)]
+                    uppers = [max(uppers_b[i], uppers_s[i]) for i in range(horizon)]
+                else:
+                    preds, lowers, uppers = preds_b, lowers_b, uppers_b
             else:
                 preds, _ = self._seasonal_forecast(train_m, train_v, horizon)
                 residuals = [
@@ -294,13 +354,65 @@ class ForecastEngine:
         coverage = (in_interval / total_checks) if total_checks else 0.80
         return round(mape, 1), rmse, round(coverage, 2), windows_run
 
+    def _auto_select(self, history: List[int]) -> Tuple[str, Dict[str, object]]:
+        """Rolling-origin holdout (1-step folds, refit per fold) ranking methods by MAPE."""
+        n = len(history)
+        if n < 18:
+            # Too short for a meaningful SARIMAX fit — score baseline only.
+            holdout = max(0, min(6, n - self._window - 1))
+            errs: List[float] = []
+            for t in range(n - holdout, n):
+                actual = history[t]
+                if actual <= 0:
+                    continue
+                pred = self._baseline_forecast(history[:t], 1)[0][0]
+                errs.append(abs(actual - pred) / actual)
+            mape_by: Dict[str, object] = (
+                {"baseline": round(sum(errs) / len(errs) * 100, 2)} if errs else {}
+            )
+            return "baseline", {
+                "selected": "baseline",
+                "mape_by_method": mape_by,
+                "holdout_points": holdout,
+                "fallback": "series_too_short_for_sarimax",
+            }
+
+        holdout = min(6, n - 12)  # keep >= 12 training points in the earliest fold
+        errs_by: Dict[str, List[float]] = {"baseline": [], "sarimax": [], "ensemble": []}
+        for t in range(n - holdout, n):
+            actual = history[t]
+            if actual <= 0:
+                continue
+            base_pred = self._baseline_forecast(history[:t], 1)[0][0]
+            sar = self._sarimax_forecast(history[:t], 1)
+            sar_pred = sar[0][0] if sar is not None else base_pred
+            fold_preds = {
+                "baseline": base_pred,
+                "sarimax": sar_pred,
+                "ensemble": (base_pred + sar_pred) // 2,
+            }
+            for name, pred in fold_preds.items():
+                errs_by[name].append(abs(actual - pred) / actual)
+
+        if not errs_by["baseline"]:
+            return "baseline", {
+                "selected": "baseline",
+                "mape_by_method": {},
+                "holdout_points": holdout,
+                "fallback": "no_positive_holdout_actuals",
+            }
+        mape_scores = {k: round(sum(v) / len(v) * 100, 2) for k, v in errs_by.items()}
+        # min() on the dict keeps insertion order as a deterministic tie-break.
+        selected = min(mape_scores, key=mape_scores.get)
+        return selected, {
+            "selected": selected,
+            "mape_by_method": mape_scores,
+            "holdout_points": holdout,
+        }
+
     def _resolve_method(self, method: str) -> str:
-        if method in ("ensemble", "prophet") and _HAS_PROPHET:
-            return method
-        if method == "prophet":
+        if method == "prophet" and not _HAS_PROPHET:
             return "seasonal"
-        if method == "ensemble":
-            return "ensemble_local"
         return method
 
     def forecast(
@@ -325,11 +437,23 @@ class ForecastEngine:
         months = [m for m, _ in series]
         history = [v for _, v in series]
         last_month = series[-1][0]
+
+        if method == "auto":
+            # Backtest-driven selection; evidence lands in accuracy.backtest for the UI.
+            selected, block = self._auto_select(history)
+            result = self.forecast(
+                metric=metric, horizon_periods=horizon_periods, method=selected
+            )
+            if result.accuracy is not None:
+                result.accuracy.backtest = block
+            return result
+
         resolved = self._resolve_method(method)
 
         feature_importance: List[FeatureImportance] = []
         lowers: Optional[List[int]] = None
         uppers: Optional[List[int]] = None
+        detail_extra: Dict[str, object] = {}
 
         if resolved == "baseline":
             preds, _, _, spread = self._baseline_forecast(history, horizon_periods)
@@ -349,35 +473,50 @@ class ForecastEngine:
                     months, history, horizon_periods
                 )
             bt_method = "prophet"
-        elif resolved == "ensemble_local":
+        elif resolved == "sarimax":
+            sar = self._sarimax_forecast(history, horizon_periods)
+            if sar is not None:
+                preds, lowers, uppers = sar
+                feature_importance = [
+                    FeatureImportance("autoregression", 0.4),
+                    FeatureImportance("seasonality_12m", 0.3),
+                    FeatureImportance("trend_differencing", 0.2),
+                    FeatureImportance("residual", 0.1),
+                ]
+                bt_method = "sarimax"
+            else:
+                preds, _, _, spread = self._baseline_forecast(history, horizon_periods)
+                lowers = [max(0, p - spread) for p in preds]
+                uppers = [p + spread for p in preds]
+                feature_importance = [
+                    FeatureImportance("trailing_average", 0.55),
+                    FeatureImportance("residual_spread", 0.45),
+                ]
+                bt_method = "baseline"
+                method = "baseline"
+                detail_extra["fallback"] = "sarimax_unavailable_used_baseline"
+        elif resolved == "ensemble":
             base_preds, _, _, spread = self._baseline_forecast(history, horizon_periods)
-            seas_preds, seas_imp = self._seasonal_forecast(months, history, horizon_periods)
-            mape_b, _, _, _ = self._rolling_origin_backtest(
-                months, history, method="baseline", n_windows=4
-            )
-            mape_s, _, _, _ = self._rolling_origin_backtest(
-                months, history, method="seasonal", n_windows=4
-            )
-            w_b = (1.0 / max(mape_b, 0.1)) / (1.0 / max(mape_b, 0.1) + 1.0 / max(mape_s, 0.1))
-            w_s = 1.0 - w_b
-            preds = [
-                max(0, int(w_b * base_preds[i] + w_s * seas_preds[i]))
-                for i in range(horizon_periods)
-            ]
-            residuals = [
-                history[i] - int(self._trend_level(history[: i + 1]))
-                for i in range(min(12, len(history)), len(history))
-            ]
-            q10, q90 = _residual_quantiles(residuals)
-            lowers = [max(0, p + q10) for p in preds]
-            uppers = [p + q90 for p in preds]
+            base_lowers = [max(0, p - spread) for p in base_preds]
+            base_uppers = [p + spread for p in base_preds]
+            sar = self._sarimax_forecast(history, horizon_periods)
+            if sar is not None:
+                sar_preds, sar_lowers, sar_uppers = sar
+                preds = [
+                    (base_preds[i] + sar_preds[i]) // 2 for i in range(horizon_periods)
+                ]
+                # Conservative envelope: widest of the two members' intervals.
+                lowers = [min(base_lowers[i], sar_lowers[i]) for i in range(horizon_periods)]
+                uppers = [max(base_uppers[i], sar_uppers[i]) for i in range(horizon_periods)]
+                bt_method = "ensemble"
+            else:
+                preds, lowers, uppers = base_preds, base_lowers, base_uppers
+                bt_method = "baseline"
+                detail_extra["fallback"] = "sarimax_unavailable_used_baseline"
             feature_importance = [
-                FeatureImportance("trend", round(w_s * seas_imp[0].importance, 2)),
-                FeatureImportance("seasonality_q4", round(w_s * seas_imp[1].importance, 2)),
-                FeatureImportance("trailing_average", round(w_b * 0.55, 2)),
+                FeatureImportance("trailing_average", 0.5),
+                FeatureImportance("sarimax", 0.5),
             ]
-            bt_method = "seasonal"
-            method = "ensemble"
         else:
             preds, feature_importance = self._seasonal_forecast(months, history, horizon_periods)
             residuals = [
@@ -418,7 +557,12 @@ class ForecastEngine:
                 )
             )
 
-        model_version = "forecast-prophet-2026.06" if resolved == "prophet" else "forecast-2026.06"
+        if resolved == "prophet":
+            model_version = "forecast-prophet-2026.06"
+        elif resolved in ("sarimax", "ensemble") and bt_method != "baseline":
+            model_version = "forecast-" + resolved + "-2026.07"
+        else:
+            model_version = "forecast-2026.06"
         return ForecastResult(
             id=fc_id,
             metric=metric,
@@ -439,10 +583,22 @@ class ForecastEngine:
                 "mape": mape,
                 "coverage_80pct": coverage,
                 "method_resolved": resolved,
+                **detail_extra,
             },
         )
 
     def to_dict(self, result: ForecastResult) -> Dict[str, object]:
+        accuracy_payload: Optional[Dict[str, object]] = None
+        if result.accuracy:
+            accuracy_payload = {
+                "mape": result.accuracy.mape,
+                "rmse_cents": result.accuracy.rmse_cents,
+                "backtest_windows": result.accuracy.backtest_windows,
+                "interval_coverage": result.accuracy.interval_coverage,
+            }
+            # Only "auto" adds the backtest block; existing payloads stay byte-identical.
+            if result.accuracy.backtest is not None:
+                accuracy_payload["backtest"] = result.accuracy.backtest
         return {
             "id": result.id,
             "metric": result.metric,
@@ -459,16 +615,7 @@ class ForecastEngine:
                 }
                 for p in result.points
             ],
-            "accuracy": (
-                {
-                    "mape": result.accuracy.mape,
-                    "rmse_cents": result.accuracy.rmse_cents,
-                    "backtest_windows": result.accuracy.backtest_windows,
-                    "interval_coverage": result.accuracy.interval_coverage,
-                }
-                if result.accuracy
-                else None
-            ),
+            "accuracy": accuracy_payload,
             "explain_ref": f"/explain/forecast/{result.id}",
             "feature_importance": [
                 {"feature": fi.feature, "importance": fi.importance}
