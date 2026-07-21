@@ -273,11 +273,23 @@ export type ForecastPoint = {
   upper_cents: number;
 };
 
+export type ForecastMethod = "baseline" | "seasonal" | "sarimax" | "ensemble" | "auto";
+
+export type ForecastBacktest = {
+  selected: string;
+  mape_by_method: Record<string, number>;
+  holdout_points: number;
+  fallback?: string;
+};
+
 export type ForecastAccuracy = {
   mape: number;
   rmse_cents: number;
   backtest_windows: number;
   interval_coverage?: number | null;
+  // Present when the forecast was created with method="auto": the evidence
+  // for why the selected method won its rolling-origin backtest.
+  backtest?: ForecastBacktest | null;
 };
 
 export type ForecastData = {
