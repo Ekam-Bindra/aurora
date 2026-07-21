@@ -88,11 +88,9 @@ Terraform update both RDS and the secret, then cycle the api service:
 
 ```bash
 cd infra/terraform
-terraform apply -replace=random_password.db
+terraform apply -replace=random_password.db_password
 aws ecs update-service --cluster aurora-staging --service aurora-staging-api --force-new-deployment
 ```
-
-(Verify the resource address with `terraform state list | grep random_password` first.)
 
 ## 5. Free-plan guardrails
 
