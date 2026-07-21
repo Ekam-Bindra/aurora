@@ -3,12 +3,12 @@
  *
  * Types come from two places (see apps/web/README.md, "Typed API client"):
  * - Generated: `lib/api-types.ts`, emitted by openapi-typescript from `apps/web/openapi.json`
- *   (regenerate with `pnpm generate:api-types`). Used where the FastAPI route declares a real
- *   response schema (auth models today).
- * - Hand-rolled: everything the API serves as an untyped `{data, meta}` envelope (plain `dict`
- *   returns without `response_model`) — the generated type for those endpoints collapses to
- *   `Record<string, unknown>`, so the interfaces below stay the source of truth until the API
- *   grows typed response envelopes.
+ *   (regenerate with `pnpm generate:api-types`). Auth, health/ready, board reports, data
+ *   sources, and ingestion jobs are generated-backed (with narrowing overrides for the
+ *   status/section literal unions the UI switches on).
+ * - Hand-rolled: routes still returning untyped `{data, meta}` dicts (metrics, graph,
+ *   forecasts, risk, simulations…) keep their interfaces below until they too declare
+ *   Envelope[...] response models.
  */
 import type { components, paths } from "./api-types";
 
@@ -21,8 +21,7 @@ const TOKEN_KEY = "aurora.access_token";
 export type AuthUser = components["schemas"]["AuthUser"];
 export type LoginResponse = components["schemas"]["LoginResponse"];
 
-// Health/ready are wired through the generated `paths`, but the routes return plain dicts
-// (no response_model), so both currently resolve to `Record<string, unknown>`.
+// Generated-backed via the HealthOut/ReadyOut response models.
 export type HealthResponse =
   paths["/api/v1/health"]["get"]["responses"][200]["content"]["application/json"];
 export type ReadyResponse =
@@ -625,15 +624,25 @@ function parseExplainRef(ref: string): { kind: ExplainData["kind"]; id: string }
 export type DataSourceKind = "file" | "accounting" | "crm" | "hris" | "api";
 export type DataSourceStatus = "connected" | "error" | "syncing" | "disabled";
 
-export type DataSource = {
-  id: string;
+/**
+ * Strips an index signature (OpenAPI additionalProperties) so Omit/Pick keep
+ * the declared keys instead of collapsing everything to unknown.
+ */
+type OmitIndexSignature<T> = {
+  [K in keyof T as string extends K ? never : number extends K ? never : K]: T[K];
+};
+
+type GenDataSource = OmitIndexSignature<components["schemas"]["DataSourceOut"]>;
+
+export type DataSource = Omit<
+  GenDataSource,
+  "kind" | "status" | "config" | "health" | "last_synced_at"
+> & {
   kind: DataSourceKind;
-  name: string;
   status: DataSourceStatus;
   last_synced_at?: string | null;
   config?: Record<string, unknown>;
   health?: { status?: string; last_synced_at?: string | null; detail?: string };
-  created_at?: string | null;
 };
 
 export type IngestionTarget = "invoices" | "expenses" | "customers" | "vendors";
@@ -651,24 +660,22 @@ export type IngestionJobError = {
   action: "rejected" | "skipped" | string;
 };
 
-export type IngestionJobSummary = {
-  job_id: string;
+type GenIngestionJob = OmitIndexSignature<components["schemas"]["IngestionJobOut"]>;
+
+export type IngestionJobDetail = Omit<
+  GenIngestionJob,
+  "status" | "target" | "errors" | "company_id"
+> & {
+  // Server echoes company_id; client-side optimistic objects omit it.
+  company_id?: string;
   status: IngestionJobStatus;
   target: IngestionTarget | string;
-  source_id?: string | null;
-  rows_total?: number;
-  rows_inserted?: number;
-  rows_updated?: number;
-  rows_rejected?: number;
-  started_at?: string | null;
-  finished_at?: string | null;
+  errors?: IngestionJobError[];
 };
 
-export type IngestionJobDetail = IngestionJobSummary & {
-  errors?: IngestionJobError[];
-  lineage_ref?: string | null;
-  ws_channel?: string | null;
-};
+// The list endpoint returns full job objects; Summary is kept as a name for
+// list-context call sites.
+export type IngestionJobSummary = IngestionJobDetail;
 
 export type DataSourceCreateParams = {
   kind: DataSourceKind;
@@ -795,11 +802,9 @@ export function formatDataSourceKind(kind: string): string {
 }
 
 // --- Board Reports (Phase 8) ---
-// Hand-rolled on purpose: /board-reports (list + get) serve an untyped {data, meta} envelope,
-// so the generated response types collapse to Record<string, unknown>. The request schema
-// components["schemas"]["BoardReportCreate"] exists but omits `template` (the server ignores
-// it) and widens `sections` to string[], so BoardReportCreateParams also stays hand-rolled
-// to match actual client usage.
+// Generated-backed: the API declares Envelope[BoardReportOut] response models, so field
+// inventory comes from the spec; status/sections/template keep their UI narrowing unions
+// via overrides, and a few advisory fields the server may attach as extras stay declared.
 
 export type BoardReportSection =
   | "financial_summary"
@@ -819,32 +824,26 @@ export type BoardReportStatus =
 
 export type BoardReportTemplate = "standard" | "executive_summary" | "risk_focus";
 
-export type BoardReportSummary = {
-  id: string;
-  title: string;
-  period_start: string;
-  period_end: string;
-  sections: BoardReportSection[] | string[];
+type GenBoardReport = OmitIndexSignature<components["schemas"]["BoardReportOut"]>;
+
+export type BoardReportSummary = Omit<GenBoardReport, "status" | "sections" | "company_id"> & {
+  // Server echoes company_id; client-side optimistic objects omit it.
+  company_id?: string;
   status: BoardReportStatus | string;
+  sections: BoardReportSection[] | string[];
   template?: BoardReportTemplate | string | null;
-  created_at?: string | null;
   generated_at?: string | null;
-  export_url?: string | null;
 };
 
 export type BoardReportDetail = BoardReportSummary & {
   approved_at?: string | null;
-  approved_by?: string | null;
-  created_by?: string | null;
   narrative?: Record<string, string>;
   metadata?: Record<string, unknown>;
-  ws_channel?: string | null;
 };
 
-export type BoardReportCreateParams = {
-  title: string;
-  period_start: string;
-  period_end: string;
+type GenBoardReportCreate = OmitIndexSignature<components["schemas"]["BoardReportCreate"]>;
+
+export type BoardReportCreateParams = Omit<GenBoardReportCreate, "sections" | "template"> & {
   sections: BoardReportSection[];
   template?: BoardReportTemplate;
 };
