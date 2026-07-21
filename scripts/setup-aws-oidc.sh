@@ -95,6 +95,15 @@ PERM_DOC="$(cat <<JSON
       "Resource": "arn:aws:ecr:*:${ACCOUNT_ID}:repository/aurora-*"
     },
     {
+      "Sid": "PassTaskRoles",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "arn:aws:iam::${ACCOUNT_ID}:role/aurora-*",
+      "Condition": {
+        "StringEquals": { "iam:PassedToService": "ecs-tasks.amazonaws.com" }
+      }
+    },
+    {
       "Sid": "AlbHealthGate",
       "Effect": "Allow",
       "Action": "elasticloadbalancing:DescribeLoadBalancers",
@@ -107,7 +116,9 @@ PERM_DOC="$(cat <<JSON
         "ecs:DescribeServices",
         "ecs:UpdateService",
         "ecs:ListServices",
-        "ecs:DescribeClusters"
+        "ecs:DescribeClusters",
+        "ecs:RunTask",
+        "ecs:DescribeTasks"
       ],
       "Resource": "*",
       "Condition": {

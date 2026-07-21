@@ -1,6 +1,6 @@
-# Build API + web images, push to ECR, and force ECS redeployment.
-# Does NOT run Terraform or Alembic migrations — see docs/DEPLOY-CHECKLIST.md
-# (migrations: one-off ECS task running `python -m aurora_db.migrate`).
+# Build API + web images, push to ECR, optionally run migrations, redeploy ECS.
+# Terraform is never run here. Migrations run only on manual dispatch with
+# run_migrations=true (one-off ECS task, `python -m aurora_db.migrate`).
 #
 # Triggers:
 #   - push to main  → automatic staging deploy (continuous delivery)
@@ -28,6 +28,11 @@ on:
         description: Docker image tag to deploy
         required: true
         default: latest
+      run_migrations:
+        description: Run Alembic migrations (one-off ECS task) before redeploy
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   id-token: write
@@ -79,6 +84,26 @@ jobs:
             -t $ECR_REGISTRY/${{ env.PROJECT_NAME }}-web:sha-${GITHUB_SHA::7} .
           docker push --all-tags $ECR_REGISTRY/${{ env.PROJECT_NAME }}-web
 
+      - name: Run database migrations (one-off ECS task)
+        if: github.event_name == 'workflow_dispatch' && inputs.run_migrations
+        env:
+          CLUSTER: ${{ env.PROJECT_NAME }}-${{ env.TARGET_ENV }}
+        run: |
+          NETCONF=$(aws ecs describe-services --cluster "$CLUSTER" \
+            --services "${CLUSTER}-api" \
+            --query "services[0].networkConfiguration" --output json)
+          TASK=$(aws ecs run-task --cluster "$CLUSTER" \
+            --task-definition "${CLUSTER}-api" --launch-type FARGATE \
+            --network-configuration "$NETCONF" \
+            --overrides '{"containerOverrides":[{"name":"api","command":["python","-m","aurora_db.migrate"]}]}' \
+            --query "tasks[0].taskArn" --output text)
+          echo "migration task: $TASK"
+          aws ecs wait tasks-stopped --cluster "$CLUSTER" --tasks "$TASK"
+          EXIT=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK" \
+            --query "tasks[0].containers[0].exitCode" --output text)
+          echo "migration exit code: $EXIT"
+          [ "$EXIT" = "0" ] || exit 1
+
       - name: Force ECS service redeployment
         env:
           CLUSTER: ${{ env.PROJECT_NAME }}-${{ env.TARGET_ENV }}
@@ -121,5 +146,5 @@ jobs:
           echo "- Cluster: ${{ env.PROJECT_NAME }}-${{ env.TARGET_ENV }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Post-deploy" >> $GITHUB_STEP_SUMMARY
-          echo "1. Run Alembic migrations if schema changed: one-off ECS task \`python -m aurora_db.migrate\` (docs/DEPLOY-CHECKLIST.md Step 4)." >> $GITHUB_STEP_SUMMARY
+          echo "1. Schema changed? Re-run via Actions dispatch with run_migrations=true (or the one-off task in docs/DEPLOY-CHECKLIST.md Step 4)." >> $GITHUB_STEP_SUMMARY
           echo "2. Load smoke: \`BASE_URL=http://<alb>/api/v1 ./scripts/load-test.sh\`" >> $GITHUB_STEP_SUMMARY

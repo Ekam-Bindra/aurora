@@ -137,3 +137,12 @@ remaining list + continuing development. Outcomes:
 | S8-2 | Client flip to generated types | ✅ | BoardReport*/DataSource/IngestionJob* generated-backed with narrowing overrides; OmitIndexSignature helper (additionalProperties pitfall); gates green |
 | S8-3 | Backtest evidence UI | ✅ | Forecasting page: method selector (baseline/sarimax/ensemble/auto) + "Why this method" panel rendering accuracy.backtest |
 | S8-4 | ADR-009 + issue templates | ✅ | Graph stays boot-rebuilt projection (revisit >30s rebuilds); bug/feature templates |
+
+## Session 9 (2026-07-20, same day) — "next items on your end" (2)
+
+| # | Task | Status | Outcome notes |
+|---|------|--------|---------------|
+| S9-1 | Task-cycling drill (live) | ✅ | Stopped a live api task: **90/90 probes green over 3 min, zero downtime**, ECS self-healed to 2/2; logged in RUNBOOK §6 |
+| S9-2 | S3 board-pack archival | ✅ | Exports write through to the provisioned bucket + 1h presigned link in X-Export-Archive-Url; best-effort (S3 failure never blocks the download); bucket/IAM/env were already wired |
+| S9-3 | Workflow migrations | ✅ | deploy.yml dispatch input run_migrations runs the one-off ECS migrate task (exit-code gated) before redeploy; OIDC role gained RunTask/DescribeTasks + scoped PassRole |
+| S9-4 | Dependabot ritual | ✅ | PROJECT-MASTER-GUIDE §16 |

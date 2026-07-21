@@ -107,6 +107,7 @@ aws ecs update-service --cluster aurora-staging --service aurora-staging-api --f
 | Date | Drill | Result |
 |------|-------|--------|
 | 2026-07-02 | Cold build (first deploy) | ~30 min to healthy incl. two real defects found/fixed (psycopg extra, parents[3]) |
+| 2026-07-20 | Task-cycling drill (stopped one live api task) | **Zero downtime**: 90/90 readiness probes green over 3 min; ECS self-healed to 2/2; ALB rotation + readiness probes behaved as designed |
 | — | Next: timed destroy→rebuild rehearsal | pending owner's staging-uptime decision |
 
 ## 7. Deployer IAM hardening (documented, deliberately not yet applied)
