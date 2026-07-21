@@ -1,0 +1,60 @@
+# Scheduled SLO check: k6 smoke against staging with tightened thresholds
+# (read-endpoint p95 < 500ms, request failures < 5%). Exits cleanly when the
+# staging stack is destroyed (credit preservation) instead of alarming.
+name: slo
+
+on:
+  schedule:
+    - cron: "0 13 * * 1,4" # Mon+Thu 13:00 UTC
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
+
+jobs:
+  slo:
+    name: k6 SLO vs staging
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Discover staging ALB
+        id: alb
+        run: |
+          ALB=$(aws elbv2 describe-load-balancers --names aurora-staging \
+            --query "LoadBalancers[0].DNSName" --output text 2>/dev/null || true)
+          if [ -z "$ALB" ] || [ "$ALB" = "None" ]; then
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "Staging stack not running — SLO check skipped." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+            echo "url=http://${ALB}/api/v1" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup k6
+        if: steps.alb.outputs.present == 'true'
+        uses: grafana/setup-k6-action@v1
+
+      - name: Run SLO thresholds
+        if: steps.alb.outputs.present == 'true'
+        env:
+          BASE_URL: ${{ steps.alb.outputs.url }}
+          SLO_P95_MS: "500"
+        run: k6 run tests/load/smoke.js
+
+      - name: Summary
+        if: steps.alb.outputs.present == 'true'
+        run: |
+          echo "## SLO check passed" >> $GITHUB_STEP_SUMMARY
+          echo "- Target: ${{ steps.alb.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Gates: p95 < 500ms, failures < 5%" >> $GITHUB_STEP_SUMMARY

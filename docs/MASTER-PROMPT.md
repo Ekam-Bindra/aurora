@@ -107,32 +107,37 @@ platform must detect and explain.
 Epics in priority order; items marked ☐ open, ◐ partial, 🚫 needs-user-input.
 
 ### E1 — Production readiness & reliability (highest)
-- ◐ **State everywhere**: agent chat sessions/interactions → `ai_interaction` table (last
-  in-memory store; in progress this session).
-- ☐ **Observability baseline**: CloudWatch alarms (ALB 5xx + latency, target health, ECS
-  running-count deficit, RDS CPU/storage/connections) → SNS email; then a dashboard; then
-  structured-log queries (request_id already propagates).
-- ☐ **Continuous delivery**: auto-deploy staging on merge to `main` (dispatch stays for
-  production); post-deploy smoke gate (health + login) inside the workflow; automatic
-  migration step decision (one-off task invocation from the workflow with approval gate).
-- ☐ **Graceful degradation audit under real infra**: behavior when RDS is unavailable,
-  Secrets rotation, task cycling; add readiness vs liveness distinction to health.
-- ☐ **Backups/DR**: RDS automated snapshot policy review (free-plan constraints), restore
-  runbook, `terraform destroy`/rebuild drill documented and timed.
-- ☐ **SLOs**: publish targets (dashboard p95 < 2.5s, metric endpoints p95 < 500ms, 10k-trial
-  simulation < 10s) and wire k6 staging runs to check them on a cadence.
+- ✅ **State everywhere** (2026-07): board reports, ingestion jobs, simulation runs, agent
+  chat — all database-backed with cross-instance tests.
+- ✅ **Observability baseline** (2026-07): 9 CloudWatch alarms → SNS email, operations
+  dashboard (`aurora-staging`), 3 saved Logs Insights queries keyed on request_id.
+- ✅ **Continuous delivery** (2026-07): merge-to-main auto-deploys staging with immutable
+  `sha-` tags + post-deploy ALB health gate; production stays manual dispatch. Open slice:
+  workflow-invoked migration task behind an approval gate.
+- ◐ **Graceful degradation**: readiness (`/ready`, 503 on DB loss) drives ALB rotation while
+  liveness restarts wedged processes; degradation contract tested. Open: rotation/task-cycling
+  drills under real infra.
+- ✅ **Backups/DR** (2026-07-20): snapshot policy reviewed (1d staging / 7d+protection prod),
+  `docs/RUNBOOK-DR.md` with measured 30-min rebuild drill + secret rotation. Open: rehearse
+  the timed destroy→rebuild once the owner decides staging uptime.
+- ✅ **SLOs** (2026-07-20): targets published in the runbook; `slo.yml` runs k6 twice weekly
+  against staging at p95<500ms (measured 42.8ms), no-ops when the stack is down.
 
 ### E2 — Security & governance
-- ☐ **Branch protection** on `main`: require the 8 CI checks + PR review, forbid force-push
-  (this session, via API).
+- 🚫 **Branch protection** on `main`: attempted via API — GitHub Free + private repo returns
+  403 ("Upgrade to GitHub Pro or make this repository public"). Owner decision.
 - 🚫 **HTTPS**: needs a domain the user buys/owns → ACM cert → `certificate_arn` tfvars →
   re-apply → HTTP→HTTPS redirect listener. Until then the ALB is HTTP-only.
-- ☐ **Secret rotation**: rotate `SECRET_KEY`/DB password path (Secrets Manager rotation or
-  documented manual runbook); scope the deployer IAM user down from AdministratorAccess.
-- ☐ **Dependency hygiene cadence**: weekly Dependabot triage ritual documented (apply-on-
-  branch + gates, close stale PRs — pattern proven this week); enable GitHub secret scanning
-  + CodeQL if plan allows.
-- ☐ **Audit trail depth**: audit_log coverage review for all mutating admin/report routes.
+- ◐ **Secret rotation**: manual runbook shipped (`RUNBOOK-DR.md` §4 — JWT key + DB password
+  via `-replace`). Open: automated rotation, and scoping the deployer IAM user down from
+  AdministratorAccess.
+- ◐ **Dependency hygiene cadence**: triage ritual proven twice (apply-on-branch within ranges,
+  gate, close superseded PRs — sessions of 2026-07-01 and 2026-07-20). Open: write it up as a
+  weekly checklist; secret scanning + CodeQL blocked with branch protection on the plan tier.
+- ✅ **Audit trail depth** (2026-07-20): report approval, data-source registration, uploads,
+  syncs, scenario creation, and simulation runs all audited (admin was already covered at the
+  service layer); coverage pinned by `test_audit_coverage.py`. Agent Q&A excluded by design
+  (`ai_interaction` is its own trail). Auth-event auditing: open decision (volume trade-off).
 
 ### E3 — Product depth (the moat)
 - 🚫 **Live AI provider**: implemented + tested; activates the moment the user supplies

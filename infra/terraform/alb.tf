@@ -76,8 +76,10 @@ resource "aws_lb_target_group" "api" {
   target_type = "ip"
 
   health_check {
-    enabled             = true
-    path                = "/api/v1/health"
+    enabled = true
+    # Readiness, not liveness: a task whose database is unreachable answers
+    # 503 here and leaves rotation until the dependency recovers.
+    path                = "/api/v1/ready"
     healthy_threshold   = 2
     unhealthy_threshold = 3
     timeout             = 5

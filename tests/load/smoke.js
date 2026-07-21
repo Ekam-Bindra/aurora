@@ -6,7 +6,8 @@ export const options = {
   duration: '30s',
   thresholds: {
     http_req_failed: ['rate<0.05'],
-    http_req_duration: ['p(95)<2000'],
+    // SLO_P95_MS tightens the latency gate (scheduled SLO runs use 500).
+    http_req_duration: [`p(95)<${__ENV.SLO_P95_MS || 2000}`],
   },
 };
 

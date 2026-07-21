@@ -13,6 +13,7 @@ from ...core.errors import NotFound, Unprocessable, ValidationError
 from ...core.logging import get_request_id
 from ...core.rbac import AuthContext, Permission
 from ...deps import get_db_session, require_permission
+from ...services.audit import record_audit
 from ...services.ingestion import (
     get_data_source,
     get_job,
@@ -63,6 +64,15 @@ def post_data_source(
         name=body.name,
         config=body.config,
     )
+    record_audit(
+        session,
+        context.tenant_id,
+        user_id=context.user_id,
+        action="data_source.register",
+        resource_type="data_source",
+        resource_id=data.get("id"),
+        after={"kind": body.kind, "name": body.name},
+    )
     return {"data": data, "meta": {"request_id": get_request_id()}}
 
 
@@ -95,6 +105,15 @@ async def post_ingestion_upload(
         )
     except ValueError as exc:
         raise ValidationError(str(exc)) from exc
+    record_audit(
+        session,
+        context.tenant_id,
+        user_id=context.user_id,
+        action="ingestion.upload",
+        resource_type="ingestion_job",
+        resource_id=job["job_id"],
+        after={"target": target, "filename": filename, "status": job["status"]},
+    )
     return {
         "data": {
             "job_id": job["job_id"],
@@ -122,6 +141,15 @@ def post_ingestion_sync(
         raise NotFound("Data source not found") from exc
     except ValueError as exc:
         raise ValidationError(str(exc)) from exc
+    record_audit(
+        session,
+        context.tenant_id,
+        user_id=context.user_id,
+        action="ingestion.sync",
+        resource_type="ingestion_job",
+        resource_id=job["job_id"],
+        after={"source_id": source_id, "target": job["target"], "status": job["status"]},
+    )
     return {
         "data": {
             "job_id": job["job_id"],

@@ -143,6 +143,15 @@ def post_approve_board_report(
         raise NotFound("Board report not found") from exc
     except ValueError as exc:
         raise ValidationError(str(exc)) from exc
+    record_audit(
+        session,
+        context.tenant_id,
+        user_id=context.user_id,
+        action="board_report.approve",
+        resource_type="board_report",
+        resource_id=report_id,
+        after={"status": data["status"]},
+    )
     return {
         "data": {"id": data["id"], "status": data["status"], "approved_by": data["approved_by"]},
         "meta": {"request_id": get_request_id()},
