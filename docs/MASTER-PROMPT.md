@@ -52,7 +52,7 @@ platform must detect and explain.
   from tool context (metrics/genome/simulation, distributions trimmed), keep evidence-trail
   parity with mock, map failures to 502, and validate keys at startup. Mock needs no keys and
   powers the full demo.
-- **AWS (staging, account 216812304180, us-east-1, live since 2026-07-02)**: VPC with public/
+- **AWS (staging, account 216812304180, us-east-1; DESTROYED 2026-07-21 to preserve credits — rebuild ≈30 min per RUNBOOK-DR §3; state safe in S3)**: VPC with public/
   private subnets + NAT · ALB (path `/api/*` → api target group, else web — same-origin, so
   CORS is moot) · ECS Fargate services `aurora-staging-{api,web}` (2 tasks each) · RDS
   Postgres 16 `db.t4g.micro/20GB` (**free-plan account limit** — t4g.medium was rejected with
@@ -85,9 +85,10 @@ platform must detect and explain.
    gitignored `.tools/` and scripts auto-fallback to them; Python 3.9 locally (keep
    `Optional[]` unions) while CI/containers run 3.11; zsh pastes treat `#` as arguments —
    instruction code blocks stay comment-free.
-7. **AWS free plan**: charges draw down credits ($120 remaining at last check, expires
-   2027-01-02), no card billing; account restricts when exhausted. Burn ≈ $2–5/day while
-   staging runs; `terraform destroy` stops it, rebuild is ~25 min from code.
+7. **AWS free plan**: charges draw down credits (≈$9 when staging was destroyed on
+   2026-07-21; expires 2027-01-02), no card billing; account restricts when exhausted.
+   Staging burned ≈$5–6/day; it is now destroyed — the deploy workflow no-ops gracefully
+   until rebuilt (RUNBOOK-DR §3, ~30 min).
 
 ### 2.3 Engineering standards (every change, no exceptions)
 
@@ -124,8 +125,9 @@ Epics in priority order; items marked ☐ open, ◐ partial, 🚫 needs-user-inp
   against staging at p95<500ms (measured 42.8ms), no-ops when the stack is down.
 
 ### E2 — Security & governance
-- 🚫 **Branch protection** on `main`: attempted via API — GitHub Free + private repo returns
-  403 ("Upgrade to GitHub Pro or make this repository public"). Owner decision.
+- ✅ **Branch protection** (2026-07-21): repo made public → protection enabled free (8
+  required CI checks, strict, no force-push/deletion) + secret scanning and push protection
+  on. Pre-publication secret sweep of tree + history was clean.
 - 🚫 **HTTPS**: needs a domain the user buys/owns → ACM cert → `certificate_arn` tfvars →
   re-apply → HTTP→HTTPS redirect listener. Until then the ALB is HTTP-only.
 - ◐ **Secret rotation**: manual runbook shipped (`RUNBOOK-DR.md` §4 — JWT key + DB password

@@ -51,6 +51,7 @@ def _get_provider(settings: Settings):
             settings.openai_api_key,
             settings.openai_model,
             timeout_seconds=settings.ai_timeout_seconds,
+            base_url=settings.openai_base_url,
         )
     return MockAIProvider()
 

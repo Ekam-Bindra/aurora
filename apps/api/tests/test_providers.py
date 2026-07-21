@@ -168,3 +168,14 @@ def test_runtime_validation_rejects_misconfiguration():
         Settings(ai_provider="bedrock").validate_runtime()
     with pytest.raises(RuntimeError, match="AI_PROVIDER"):
         Settings(ai_provider="grok").validate_runtime()
+
+
+def test_factory_passes_openai_base_url():
+    provider = _get_provider(
+        Settings(
+            ai_provider="openai",
+            openai_api_key="k",
+            openai_base_url="https://api.groq.com/openai",
+        )
+    )
+    assert provider._base_url == "https://api.groq.com/openai"
