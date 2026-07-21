@@ -12,6 +12,7 @@ from ...core.errors import NotFound, Unprocessable
 from ...core.logging import get_request_id
 from ...core.rbac import AuthContext, Permission
 from ...deps import get_db_session, require_permission
+from ...services.audit import record_audit
 from ...services.simulation import (
     create_scenario,
     explain_simulation,
@@ -71,6 +72,15 @@ def post_scenario(
         created_by=context.user_id,
         description=body.description,
     )
+    record_audit(
+        session,
+        context.tenant_id,
+        user_id=context.user_id,
+        action="scenario.create",
+        resource_type="scenario",
+        resource_id=data["id"],
+        after={"name": body.name, "trials": body.trials},
+    )
     return {
         "data": {"id": data["id"], "status": data["status"]},
         "meta": {"request_id": get_request_id()},
@@ -111,6 +121,15 @@ def post_run_scenario(
         result = run_scenario(session, context.tenant_id, scenario_id)
     except KeyError as exc:
         raise NotFound("Scenario not found") from exc
+    record_audit(
+        session,
+        context.tenant_id,
+        user_id=context.user_id,
+        action="simulation.run",
+        resource_type="simulation",
+        resource_id=result["id"],
+        after={"scenario_id": scenario_id, "trials": result.get("trials")},
+    )
     return {
         "data": {
             "simulation_id": result["id"],
