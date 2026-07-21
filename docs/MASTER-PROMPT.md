@@ -147,11 +147,13 @@ Epics in priority order; items marked ☐ open, ◐ partial, 🚫 needs-user-inp
 - ☐ **Async job architecture**: long simulations and board-pack rendering move to background
   workers (SQS or Redis/RQ per ADR-007) with job-status polling the UI already supports;
   removes request-timeout ceilings and enables >10k-trial runs.
-- ☐ **Board pack rendering**: real PDF engine (current export is a placeholder single-page
-  PDF; HTML/JSON are full-fidelity), scheduled generation, S3 storage + signed URLs
-  (bucket + IAM already provisioned).
-- ☐ **Forecast ensemble** (roadmap P9 leftover): SARIMAX/ensemble beating the baseline on
-  backtest MAPE, with accuracy surfaced in UI.
+- ◐ **Board pack rendering** (2026-07-20): real multi-page reportlab PDF engine shipped
+  (cover + per-section layouts, sparse-safe). Open: scheduled generation, S3 storage +
+  signed URLs (bucket + IAM already provisioned).
+- ✅ **Forecast ensemble** (2026-07-20): SARIMAX + ensemble + "auto" with rolling-backtest
+  selection; `accuracy.backtest` carries {selected, mape_by_method, holdout_points} as the
+  explainability evidence (synthetic backtest: sarimax 0.7% vs baseline 20.5% MAPE). Open:
+  surface the backtest block in the forecasting UI.
 - ☐ **Live connectors** beyond CSV: one real accounting SaaS connector (QuickBooks/Xero
   sandbox) through the existing connector registry + lineage.
 - ☐ **Graph durability**: Neo4j in prod or keep in-memory projection rebuilt at boot
@@ -165,7 +167,11 @@ Epics in priority order; items marked ☐ open, ◐ partial, 🚫 needs-user-inp
 - ☐ Schema-per-tenant isolation option per ADR-004's documented upgrade path.
 
 ### E5 — Developer experience
-- ☐ OpenAPI-generated typed client for the web app (replacing hand-rolled `lib/api.ts`).
+- ◐ OpenAPI-generated typed client (2026-07-20): versioned spec + generated types pipeline
+  (`pnpm generate:api-types`); auth/login/health types generated-backed. Open: add
+  `response_model` envelopes to API routes so the remaining hand-rolled interfaces (board
+  reports, ingestion, metrics…) can flip to generated — also fixes the found drift
+  (client-only `template` field).
 - ✅ Pre-commit hooks (2026-07-20): `.githooks/pre-commit` lints staged files only
   (ruff/eslint); enable per clone with `git config core.hooksPath .githooks`.
 - ☐ Devcontainer/Nix for parity with CI (kills the 3.9-vs-3.11 gap and the no-Docker gap).
