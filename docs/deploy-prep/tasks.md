@@ -146,3 +146,13 @@ remaining list + continuing development. Outcomes:
 | S9-2 | S3 board-pack archival | ✅ | Exports write through to the provisioned bucket + 1h presigned link in X-Export-Archive-Url; best-effort (S3 failure never blocks the download); bucket/IAM/env were already wired |
 | S9-3 | Workflow migrations | ✅ | deploy.yml dispatch input run_migrations runs the one-off ECS migrate task (exit-code gated) before redeploy; OIDC role gained RunTask/DescribeTasks + scoped PassRole |
 | S9-4 | Dependabot ritual | ✅ | PROJECT-MASTER-GUIDE §16 |
+
+## Session 10 (2026-07-21) — "destroy staging, go public, free-tier paths"
+
+| # | Task | Status | Outcome notes |
+|---|------|--------|---------------|
+| S10-1 | Secret sweep + repo → public | ✅ | Tree + full history clean (no keys/emails/env/tfvars/state ever committed); repo public |
+| S10-2 | Branch protection + secret scanning | ✅ | Free on public: 8 required checks, strict, no force-push; secret scanning + push protection enabled |
+| S10-3 | Deploy guard | ✅ | deploy.yml no-ops with a summary when the cluster is absent — merges stay green while staging is down |
+| S10-4 | OPENAI_BASE_URL | ✅ | Any OpenAI-compatible endpoint (Groq/Gemini-compat free tiers) usable via env; factory test added |
+| S10-5 | Staging destroyed (owner-authorized) | ✅ | Uploads bucket + ECR emptied, terraform destroy clean; state preserved in S3; credit burn stopped (~$9 remaining) |
