@@ -17,6 +17,7 @@ from aurora_db.types import new_uuid
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from .board_pdf import render_pdf
 from .financial import metrics_overview
 from .forecast import create_forecast
 from .risk import compute_genome
@@ -339,39 +340,4 @@ def export_report(
 
         body = json.dumps(report.get("content"), indent=2).encode("utf-8")
         return body, "application/json", f"{safe_title}.json"
-    # Minimal PDF stub with real title (no external deps).
-    title = report.get("title") or "Board Report"
-    pdf = _minimal_pdf(title)
-    return pdf, "application/pdf", f"{safe_title}.pdf"
-
-
-def _minimal_pdf(title: str) -> bytes:
-    """Single-page PDF stub carrying the report title (export placeholder)."""
-    safe = title.replace("(", "[").replace(")", "]")[:80]
-    stream = f"BT /F1 18 Tf 72 720 Td ({safe}) Tj ET"
-    objects = [
-        b"1 0 obj<< /Type /Catalog /Pages 2 0 R >>endobj\n",
-        b"2 0 obj<< /Type /Pages /Kids [3 0 R] /Count 1 >>endobj\n",
-        (
-            b"3 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] "
-            b"/Contents 4 0 R /Resources<< /Font<< /F1 5 0 R >> >> >>endobj\n"
-        ),
-        f"4 0 obj<< /Length {len(stream)} >>stream\n{stream}\nendstream endobj\n".encode(),
-        b"5 0 obj<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>endobj\n",
-    ]
-    body = b"".join(objects)
-    pdf = b"%PDF-1.4\n" + body
-    xref_pos = len(pdf)
-    xref = b"xref\n0 6\n0000000000 65535 f \n"
-    # Simplified xref — use fixed widths for demo stub
-    offsets = []
-    pos = 9
-    for obj in objects:
-        offsets.append(pos)
-        pos += len(obj)
-    for off in offsets:
-        xref += f"{off:010d} 00000 n \n".encode()
-    trailer = (
-        f"trailer<< /Size 6 /Root 1 0 R >>\nstartxref\n{xref_pos}\n%%EOF"
-    ).encode()
-    return pdf + xref + trailer
+    return render_pdf(report), "application/pdf", f"{safe_title}.pdf"
