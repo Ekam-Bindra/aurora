@@ -13,5 +13,10 @@ echo "    App:        http://localhost:3000"
 echo "    Login:      cfo@nimbus.test / aurora-demo-2026"
 echo ""
 
+if [ ! -d "$WEB_DIR/node_modules" ]; then
+  echo "==> Installing workspace dependencies (first run)"
+  (cd "$ROOT" && pnpm install)
+fi
+
 cd "$WEB_DIR"
 exec pnpm dev
