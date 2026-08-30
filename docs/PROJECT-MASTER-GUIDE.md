@@ -26,7 +26,7 @@ impact analysis, Monte Carlo simulations, and an explainable executive AI agent.
 | Path | Purpose |
 |------|---------|
 | `apps/api` | FastAPI backend — auth, RBAC, modules, OpenAPI |
-| `apps/web` | Next.js 14 App Router executive UI |
+| `apps/web` | Next.js 16 App Router executive UI |
 | `packages/database` | SQLAlchemy models, Alembic, Nimbus seeder (`aurora_db`) |
 | `packages/ml` | Financial marts, calculators, forecast + risk engines (`aurora_ml`) |
 | `packages/graph` | Knowledge graph sync + queries (`aurora_graph`) |
@@ -42,7 +42,7 @@ impact analysis, Monte Carlo simulations, and an explainable executive AI agent.
 | `docs/DEPLOYMENT.md` | Production deploy runbook (Phase 9) |
 | `docs/` | Architecture, data model, API spec, roadmap |
 
-**GitHub:** https://github.com/Ekam-Bindra/aurora (private)
+**GitHub:** https://github.com/Ekam-Bindra/aurora (public, MIT-licensed, branch-protected `main`)
 
 **Branches:** `main` = integrated phases; feature work on `feat/phase-N-*`.
 
